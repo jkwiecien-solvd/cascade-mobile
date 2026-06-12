@@ -4,7 +4,7 @@ A React Native (Expo) mobile client for **[Cascade](../cascade)** — the open-s
 
 This app is a thin client of Cascade's **Dashboard API** — the same tRPC API the existing `web/` dashboard consumes. It reuses the backend's `AppRouter` type for end-to-end type safety, so screens are built against the real server contract with no hand-written DTOs.
 
-> **Status:** scaffolded. The Expo project, navigation, and the Cascade integration dependencies are installed. The tRPC client, auth flow, and feature screens are not yet wired up — see [Next steps](#next-steps).
+> **Status:** scaffolded. The Expo project, navigation, Cascade integration dependencies, and the foundational tRPC + React Query data layer ([`src/lib/`](./src/lib/)) are in place. The auth flow and feature screens are not yet wired up — see [Next steps](#next-steps).
 
 ---
 
@@ -58,7 +58,7 @@ React Native's `fetch` does **not** persist cookies across requests like a brows
 
 ## Getting started
 
-**Prerequisites:** Node.js, a running Cascade Dashboard API (see the [backend dev guide](../cascade/README.md#-development)), and Xcode/Android Studio or Expo Go.
+**Prerequisites:** Node.js, a running Cascade Dashboard API (see the [backend dev guide](../cascade/README.md#-development)), the cascade repo checked out **as a sibling** of this one (`../cascade`), and Xcode/Android Studio or Expo Go.
 
 ```bash
 npm install
@@ -69,9 +69,25 @@ npm run android
 npm run web
 ```
 
-`npm run lint` runs `expo lint`.
+`npm run lint` runs `expo lint`. Type-checking (`npx tsc --noEmit`) requires the sibling cascade checkout — see [Cross-repo type dependency](#cross-repo-type-dependency).
 
-The API base URL must point at your Cascade Dashboard API. On a simulator that's typically `http://localhost:3001`; on a physical device use your machine's LAN IP. (Wiring this through config is part of [Next steps](#next-steps).)
+### Configuring the API base URL
+
+The app reads the Dashboard API base URL from `EXPO_PUBLIC_API_URL` (Expo inlines this at build time):
+
+| Target | Value |
+|---|---|
+| iOS simulator | `http://localhost:3001` (default — no override needed) |
+| Android emulator | `http://10.0.2.2:3001` (default — no override needed) |
+| Physical device | `http://<YOUR_LAN_IP>:3001` ← **required**, cannot be auto-detected |
+
+Copy `.env.local.example` to `.env.local` and set `EXPO_PUBLIC_API_URL` to the LAN IP of the machine running the Dashboard API when you're on a real device. The platform defaults live in [`src/lib/api.ts`](./src/lib/api.ts).
+
+### Cross-repo type dependency
+
+[`src/lib/trpc.ts`](./src/lib/trpc.ts) imports the backend's `AppRouter` as a **type only** from `../../cascade/src/api/router` (the single deliberate exception to the no-relative-imports rule — see [`ai/RULES.md` §3](./ai/RULES.md)). Zero runtime crosses the repo boundary.
+
+For this to type-check, the cascade repo must be reachable at the resolved path. If `npx tsc --noEmit` reports `Cannot find module '../../cascade/src/api/router'`, check out the cascade repo so that file is present, or provide a local `AppRouter` stub `.d.ts` (only needed for isolated checkouts without the backend repo).
 
 ---
 
@@ -80,11 +96,15 @@ The API base URL must point at your Cascade Dashboard API. On a simulator that's
 ```
 src/
   app/            # Expo Router routes (file-based). Entry: expo-router/entry
-    _layout.tsx   # Root layout / providers
+    _layout.tsx   # Root layout / providers (wraps tree in QueryClientProvider)
     index.tsx
   components/     # Reusable UI
   constants/      # theme, etc.
   hooks/          # color scheme, theme
+  lib/            # API client, query client, auth helpers (mirrors web/src/lib/)
+    api.ts        # API_URL (platform-aware, EXPO_PUBLIC_API_URL override)
+    query-client.ts  # singleton React Query client
+    trpc.ts       # typed tRPC client + org-context / cookie getter seams
 ai/
   RULES.md        # System prompt / working rules for AI agents on this repo
 ```
@@ -102,7 +122,7 @@ This repo is built with AI agents. Before any code is written, read:
 
 ## Next steps
 
-The immediate roadmap is the tRPC client, the login/cookie flow, and the first project/runs screen. See the end of [ai/RULES.md](./ai/RULES.md) for detail.
+The immediate roadmap is the login/cookie flow (registers `setCookieGetter` from [`src/lib/trpc.ts`](./src/lib/trpc.ts)), the org-context switcher (registers `setOrgContextGetter`), and the first project/runs screen. See the end of [ai/RULES.md](./ai/RULES.md) for detail.
 
 ## License
 
