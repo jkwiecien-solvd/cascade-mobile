@@ -112,7 +112,7 @@ Foundational integration work, in order:
 
 1. ✅ **`src/lib/` foundation** — `api.ts` (base URL config), `query-client.ts`, `trpc.ts` (typed client against `AppRouter`), and a cookie/secure-store layer for session persistence.
 2. ✅ **Auth flow** — login screen (`fetch` → cookie capture), session bootstrap on launch, `auth.me`, logout, and routing between authed/unauthed states. Lives in `src/lib/auth/` + `src/app/login.tsx` + the root-layout auth gate.
-3. **Org context** — header getter + (superadmin) org switcher, defaulting to the user's org.
+3. ✅ **Org context** — `OrgProvider`/`useOrg` (`src/lib/org-context.tsx`) registers `setOrgContextGetter` from a synchronous module ref, derives the effective org from `auth.me` (member → own org; superadmin → persisted choice clamped to `availableOrgs`, else default), persists the superadmin's choice via `expo-secure-store` (`src/lib/org-storage.ts` + `.web.ts` → `localStorage`), and invalidates React Query on switch. A minimal superadmin-only switcher lives in `src/components/org-switcher.tsx` (members render nothing); the provider is mounted in the root layout.
 4. **First feature screen** — projects list → project detail / runs, proving the end-to-end typed path.
 
 Keep this list current as work lands.
