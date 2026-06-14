@@ -78,8 +78,9 @@ async function refreshCache(): Promise<void> {
  */
 export async function captureFromResponse(response: Response): Promise<void> {
   const setCookie = response.headers.get('set-cookie');
-  if (!setCookie) return;
-  await CookieManager.setFromResponse(API_URL, setCookie);
+  if (setCookie) {
+    await CookieManager.setFromResponse(API_URL, setCookie);
+  }
   await refreshCache();
 }
 

@@ -68,7 +68,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // org, available orgs — when the org-context card consumes it). The cast
         // is valid whether or not the backend `AppRouter` types resolve in this
         // checkout.
-        const me = (await queryClient.fetchQuery(trpc.auth.me.queryOptions())) as AuthUser;
+        const me = (await queryClient.fetchQuery({
+          ...trpc.auth.me.queryOptions(),
+          retry: false,
+        })) as AuthUser;
         if (cancelled) return;
         setUser({ id: me.id, email: me.email, name: me.name, role: me.role });
         setStatus('authenticated');
@@ -92,7 +95,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (email: string, password: string) => {
       await loginRequest(email, password);
       // Load the full me-context (effective org, etc.) now that we have a cookie.
-      const me = (await queryClient.fetchQuery(trpc.auth.me.queryOptions())) as AuthUser;
+      const me = (await queryClient.fetchQuery({
+        ...trpc.auth.me.queryOptions(),
+        retry: false,
+      })) as AuthUser;
       setUser({ id: me.id, email: me.email, name: me.name, role: me.role });
       setStatus('authenticated');
     },
