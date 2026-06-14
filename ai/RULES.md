@@ -110,8 +110,8 @@ If the cookie approach proves brittle, the documented fallback is a small backen
 
 Foundational integration work, in order:
 
-1. **`src/lib/` foundation** — `api.ts` (base URL config), `query-client.ts`, `trpc.ts` (typed client against `AppRouter`), and a cookie/secure-store layer for session persistence.
-2. **Auth flow** — login screen (`fetch` → cookie capture), session bootstrap on launch, `auth.me`, logout, and routing between authed/unauthed states.
+1. ✅ **`src/lib/` foundation** — `api.ts` (base URL config), `query-client.ts`, `trpc.ts` (typed client against `AppRouter`), and a cookie/secure-store layer for session persistence.
+2. ✅ **Auth flow** — login screen (`fetch` → cookie capture), session bootstrap on launch, `auth.me`, logout, and routing between authed/unauthed states. Lives in `src/lib/auth/` + `src/app/login.tsx` + the root-layout auth gate.
 3. **Org context** — header getter + (superadmin) org switcher, defaulting to the user's org.
 4. **First feature screen** — projects list → project detail / runs, proving the end-to-end typed path.
 
