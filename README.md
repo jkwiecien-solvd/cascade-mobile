@@ -4,7 +4,7 @@ A React Native (Expo) mobile client for **[Cascade](../cascade)** — the open-s
 
 This app is a thin client of Cascade's **Dashboard API** — the same tRPC API the existing `web/` dashboard consumes. It reuses the backend's `AppRouter` type for end-to-end type safety, so screens are built against the real server contract with no hand-written DTOs.
 
-> **Status:** scaffolded. The Expo project, navigation, Cascade integration dependencies, and the foundational tRPC + React Query data layer ([`src/lib/`](./src/lib/)) are in place. The auth flow and feature screens are not yet wired up — see [Next steps](#next-steps).
+> **Status:** scaffolded with auth wired. The Expo project, navigation, Cascade integration dependencies, the foundational tRPC + React Query data layer ([`src/lib/`](./src/lib/)), and the **auth flow** (login → cookie persistence → session bootstrap → logout, in [`src/lib/auth/`](./src/lib/auth/) + [`src/app/login.tsx`](./src/app/login.tsx)) are in place. Feature screens are not yet wired up — see [Next steps](#next-steps).
 
 ---
 
@@ -96,15 +96,24 @@ For this to type-check, the cascade repo must be reachable at the resolved path.
 ```
 src/
   app/            # Expo Router routes (file-based). Entry: expo-router/entry
-    _layout.tsx   # Root layout / providers (wraps tree in QueryClientProvider)
-    index.tsx
-  components/     # Reusable UI
+    _layout.tsx   # Root layout: providers + <Stack> + auth gate (redirects)
+    login.tsx     # Unauthenticated login screen (outside the tab group)
+    (tabs)/       # Authenticated app (URL-transparent group)
+      _layout.tsx # Renders the native tab bar (AppTabs)
+      index.tsx
+      explore.tsx
+  components/     # Reusable UI (incl. logout-button.tsx)
   constants/      # theme, etc.
   hooks/          # color scheme, theme
   lib/            # API client, query client, auth helpers (mirrors web/src/lib/)
     api.ts        # API_URL (platform-aware, EXPO_PUBLIC_API_URL override)
     query-client.ts  # singleton React Query client
     trpc.ts       # typed tRPC client + org-context / cookie getter seams
+    auth/         # cookie jar, auth service, AuthProvider/useAuth, barrel
+      cookie-jar.ts     # @react-native-cookies/cookies + expo-secure-store
+      auth-service.ts   # login/logout (fetch) + AuthUser / AuthError
+      auth-provider.tsx # <AuthProvider> + useAuth() state machine
+      index.ts          # public barrel
 ai/
   RULES.md        # System prompt / working rules for AI agents on this repo
 ```
@@ -122,7 +131,9 @@ This repo is built with AI agents. Before any code is written, read:
 
 ## Next steps
 
-The immediate roadmap is the login/cookie flow (registers `setCookieGetter` from [`src/lib/trpc.ts`](./src/lib/trpc.ts)), the org-context switcher (registers `setOrgContextGetter`), and the first project/runs screen. See the end of [ai/RULES.md](./ai/RULES.md) for detail.
+The login/cookie flow is now wired: [`src/lib/auth/`](./src/lib/auth/) captures and persists the session cookie (registering `setCookieGetter` from [`src/lib/trpc.ts`](./src/lib/trpc.ts)), bootstraps the session on launch via `auth.me`, and gates routing between [`src/app/login.tsx`](./src/app/login.tsx) and the authenticated `src/app/(tabs)/` group.
+
+The remaining roadmap is the org-context switcher (registers `setOrgContextGetter`, defaulting to the user's org) and the first project/runs screen. See the end of [ai/RULES.md](./ai/RULES.md) for detail.
 
 ## License
 
