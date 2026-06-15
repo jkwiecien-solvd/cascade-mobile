@@ -1,5 +1,6 @@
 import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
+import { router } from 'expo-router';
+import { Platform, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AnimatedIcon } from '@/components/animated-icon';
@@ -59,6 +60,15 @@ export default function HomeScreen() {
 
         <OrgSwitcher />
 
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push('/projects')}
+          style={({ pressed }) => [styles.projectsButton, pressed && styles.pressed]}>
+          <ThemedView type="backgroundElement" style={styles.projectsButtonInner}>
+            <ThemedText type="link">View projects</ThemedText>
+          </ThemedView>
+        </Pressable>
+
         <LogoutButton />
 
         {Platform.OS === 'web' && <WebBadge />}
@@ -100,5 +110,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.four,
     borderRadius: Spacing.four,
+  },
+  projectsButton: {
+    alignSelf: 'stretch',
+  },
+  projectsButtonInner: {
+    paddingVertical: Spacing.three,
+    borderRadius: Spacing.three,
+    alignItems: 'center',
+  },
+  pressed: {
+    opacity: 0.7,
   },
 });
