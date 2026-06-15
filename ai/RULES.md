@@ -1,6 +1,6 @@
 # Cascade Mobile — Agent Rules
 
-System prompt and working conventions for AI agents in this repository. Read this in full before writing code. It complements (does not replace) the root [`AGENTS.md`](../AGENTS.md).
+System prompt and working conventions for AI agents in this repository — the **single source of truth**. Read this in full before writing code. `CLAUDE.md` and `GEMINI.md` at the repo root simply point here.
 
 ---
 
@@ -116,3 +116,79 @@ Foundational integration work, in order:
 4. ✅ **First feature screen** — projects list → project detail / runs, proving the end-to-end typed path. A top-level `src/app/projects/` route group (`_layout.tsx` auth guard + nested `Stack`, `index.tsx` list, `[projectId].tsx` runs detail), entered from a "View projects" link on the Home tab. Data flows through thin org-scoped hooks (`src/hooks/use-projects.ts`, `src/hooks/use-project-runs.ts`) that wrap `trpc.projects.list` / `trpc.runs.list` and gate on `useOrg().isReady`. Shared presentational pieces live in `src/components/run-status-badge.tsx` (status→color pill, graceful unknown-status fallback) and `src/components/query-states.tsx` (`Loading`/`EmptyState`/`ErrorState`), with pull-to-refresh on both `FlatList`s.
 
 Keep this list current as work lands.
+
+---
+
+## 7. Trello board
+
+Tasks for this project live on the Trello board **cascade-mobile**:
+<https://trello.com/b/sczhySKj/cascade-mobile>
+
+### Credentials (never read or print them)
+
+Trello API credentials live in `.env.local` (gitignored):
+
+- `TRELLO_KEY`
+- `TRELLO_TOKEN`
+- `TRELLO_LIST` — default target list (Backlog)
+
+`.env.local` is protected by a `Read(./.env.local)` deny rule in `.claude/settings.json`. **Do not read this file and do not echo its values.** Consume the secrets only by sourcing the file inside a shell command so they flow straight into `curl` and never enter the conversation:
+
+```bash
+set -a; . ./.env.local 2>/dev/null; set +a
+# $TRELLO_KEY / $TRELLO_TOKEN / $TRELLO_LIST are now available to curl
+```
+
+### List IDs
+
+| List        | ID                         |
+| ----------- | -------------------------- |
+| Backlog     | `6a2b9468bbb2463904940fee` |
+| Planning    | `6a2b9c0847f7cd302fe0dbda` |
+| To do       | `6a2b9468bbb2463904940fef` |
+| Splitting   | `6a2b9c04c7c515142fe2170b` |
+| In progress | `6a2b9468bbb2463904940ff0` |
+| In review   | `6a2b9530359ad42ace02d45a` |
+| Done        | `6a2b9533074224f06d86d51d` |
+
+New tasks default to **Backlog** (`$TRELLO_LIST`).
+
+### Create a card
+
+```bash
+set -a; . ./.env.local 2>/dev/null; set +a
+read -r -d '' DESC <<'EOF'
+<markdown description>
+EOF
+curl -s -X POST "https://api.trello.com/1/cards" \
+  --data-urlencode "key=$TRELLO_KEY" \
+  --data-urlencode "token=$TRELLO_TOKEN" \
+  --data-urlencode "idList=$TRELLO_LIST" \
+  --data-urlencode "name=<card title>" \
+  --data-urlencode "desc=$DESC"
+```
+
+### Update a card (by short code, e.g. `DLHgKo9K` from the card URL)
+
+```bash
+set -a; . ./.env.local 2>/dev/null; set +a
+curl -s -X PUT "https://api.trello.com/1/cards/<shortCode>" \
+  --data-urlencode "key=$TRELLO_KEY" \
+  --data-urlencode "token=$TRELLO_TOKEN" \
+  --data-urlencode "name=<new title>" \
+  --data-urlencode "desc=<new description>"
+```
+
+To move a card to another list, add `--data-urlencode "idList=<list id>"`.
+
+### List a board's lists (non-secret GET, useful for finding list IDs)
+
+```bash
+set -a; . ./.env.local 2>/dev/null; set +a
+curl -s "https://api.trello.com/1/boards/sczhySKj/lists?key=$TRELLO_KEY&token=$TRELLO_TOKEN&fields=name"
+```
+
+### Conventions for task cards
+
+- Cards describe **requirements**, not implementation plans, unless asked.
+- For features ported from cascade (`../cascade/web`): do **not** assume a 1:1 port. Call out the mobile-native adaptation (e.g. tables → cards, numbered pagination → infinite scroll, inline `<select>` filters → sheets/chips) and an explicit **Out of scope** section so each screen stays its own card.

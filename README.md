@@ -130,8 +130,7 @@ ai/
 
 This repo is built with AI agents. Before any code is written, read:
 
-- **[AGENTS.md](./AGENTS.md)** — Expo SDK 56 changed a lot; consult the **exact versioned docs** at <https://docs.expo.dev/versions/v56.0.0/>.
-- **[ai/RULES.md](./ai/RULES.md)** — the system prompt and conventions for agents working in this codebase.
+- **[ai/RULES.md](./ai/RULES.md)** — the single source of truth: system prompt and conventions for agents working in this codebase (including the Expo SDK 56 rule — consult the **exact versioned docs** at <https://docs.expo.dev/versions/v56.0.0/>). `CLAUDE.md` and `GEMINI.md` point here.
 
 ---
 
