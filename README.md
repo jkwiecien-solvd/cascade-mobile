@@ -100,11 +100,15 @@ src/
     login.tsx     # Unauthenticated login screen (outside the tab group)
     (tabs)/       # Authenticated app (URL-transparent group)
       _layout.tsx # Renders the native tab bar (AppTabs)
-      index.tsx
+      index.tsx   # Home — links to the projects group
       explore.tsx
-  components/     # Reusable UI (incl. logout-button.tsx)
+    projects/     # First feature path (own auth-guard Stack)
+      _layout.tsx # Auth redirect + nested Stack (headers on)
+      index.tsx   # Projects list (FlatList + pull-to-refresh)
+      [projectId].tsx # Project detail — runs list + status badges
+  components/     # Reusable UI (incl. logout-button.tsx, run-status-badge.tsx, query-states.tsx)
   constants/      # theme, etc.
-  hooks/          # color scheme, theme
+  hooks/          # color scheme, theme, use-projects, use-project-runs
   lib/            # API client, query client, auth helpers (mirrors web/src/lib/)
     api.ts        # API_URL (platform-aware, EXPO_PUBLIC_API_URL override)
     query-client.ts  # singleton React Query client
@@ -137,7 +141,9 @@ The login/cookie flow is now wired: [`src/lib/auth/`](./src/lib/auth/) captures 
 
 The org-context layer is now wired: [`src/lib/org-context.tsx`](./src/lib/org-context.tsx) registers `setOrgContextGetter` from [`src/lib/trpc.ts`](./src/lib/trpc.ts), derives the effective org from `auth.me` (members are pinned to their own org; superadmins may switch), persists a superadmin's choice via `expo-secure-store` (with a `localStorage` web split in [`src/lib/org-storage.ts`](./src/lib/org-storage.ts)), and invalidates React Query on switch. The superadmin-only switcher lives in [`src/components/org-switcher.tsx`](./src/components/org-switcher.tsx) and self-hides for members.
 
-The remaining roadmap is the first project/runs screen. See the end of [ai/RULES.md](./ai/RULES.md) for detail.
+The first end-to-end feature path is now wired: a top-level [`src/app/projects/`](./src/app/projects/) route group (its own auth-guard `Stack`) lists org-scoped projects and drills into a project's **runs** with status badges, entered from a "View projects" link on the Home tab. Data flows through thin typed hooks ([`src/hooks/use-projects.ts`](./src/hooks/use-projects.ts), [`src/hooks/use-project-runs.ts`](./src/hooks/use-project-runs.ts)) that wrap `trpc.projects.list` / `trpc.runs.list`, gate on `useOrg().isReady`, and rely on end-to-end `AppRouter` inference (no hand-written DTOs). Both screens reuse shared loading / empty / error views ([`src/components/query-states.tsx`](./src/components/query-states.tsx)) and a status pill ([`src/components/run-status-badge.tsx`](./src/components/run-status-badge.tsx)), with pull-to-refresh.
+
+The remaining roadmap (PR review status, promoting Projects to a first-class tab, etc.) builds on this path. See the end of [ai/RULES.md](./ai/RULES.md) for detail.
 
 ## License
 
