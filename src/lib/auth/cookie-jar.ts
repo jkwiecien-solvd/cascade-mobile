@@ -5,8 +5,10 @@
  * React Native's `fetch` does **not** maintain a cookie jar across requests the
  * way a browser does, but the Cascade Dashboard API authenticates **purely**
  * from the session cookie (`ai/RULES.md §4`). This module is the single place
- * that talks to `@react-native-cookies/cookies` (platform behaviour differs:
- * iOS `HTTPCookieStorage`, Android OkHttp jar, web `document.cookie`) and keeps
+ * that talks to `@preeternal/react-native-cookie-manager` (a New-Architecture /
+ * TurboModule drop-in for `@react-native-cookies/cookies`; platform behaviour
+ * differs: iOS `HTTPCookieStorage`, Android OkHttp jar, web `document.cookie`)
+ * and keeps
  * the captured cookie available to the synchronous tRPC `headers()` callback.
  *
  * ## How it works
@@ -31,7 +33,7 @@
  * - `clearCookies` uses `clearAll()` for the host rather than name-by-name, so
  *   rotated/renamed session cookies are always removed on logout.
  */
-import CookieManager from '@react-native-cookies/cookies';
+import CookieManager from '@preeternal/react-native-cookie-manager';
 import * as SecureStore from 'expo-secure-store';
 
 import { API_URL } from '../api';
