@@ -172,16 +172,18 @@ export function OrgProvider({ children }: { children: ReactNode }) {
       // Ignore an org the user is not allowed to switch to.
       if (!availableOrgs.some((org) => org.id === orgId)) return;
 
-      // Order matters: ref (sync header) → state (UI) → persistence → refetch.
+      // Order matters: ref (sync header) → state (UI) → refetch → persistence.
       // The ref is set here (in a handler) so the invalidation's refetch already
       // carries the new org id, before the mirror effect runs.
       currentOrgId = orgId;
       setSelectedOrgId(orgId);
-      await setStoredOrgId(orgId);
       // Invalidate (not reset) so the UI stays mounted and active queries —
       // including `auth.me` — refetch under the new org id. Matches the web
-      // reference client's switch behavior.
+      // reference client's switch behavior. Run this before persistence so a
+      // failing secure-store write can't strand the UI on un-refetched data —
+      // the session-local switch still takes full effect either way.
       await queryClient.invalidateQueries();
+      await setStoredOrgId(orgId);
     },
     [availableOrgs, queryClient],
   );
