@@ -3,8 +3,10 @@
  *
  * Provider order matters: `QueryClientProvider` is outermost because
  * `AuthProvider` calls `queryClient.fetchQuery(auth.me)` during its launch
- * bootstrap, so it must sit inside the query client. `ThemeProvider` wraps the
- * rendered tree (theme is derived from the OS color scheme exactly as before).
+ * bootstrap, so it must sit inside the query client. `OrgProvider` nests inside
+ * `AuthProvider` — it reads the auth status to gate `auth.me` and registers the
+ * `x-org-context` header getter. `ThemeProvider` wraps the rendered tree (theme
+ * is derived from the OS color scheme exactly as before).
  *
  * The `AnimatedSplashOverlay` stays at the root so it plays once over whichever
  * screen the auth gate lands on (login or tabs), rather than only inside the app.
@@ -27,6 +29,7 @@ import { ActivityIndicator, StyleSheet, useColorScheme, View } from 'react-nativ
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { AuthProvider, useAuth, type AuthStatus } from '@/lib/auth';
+import { OrgProvider } from '@/lib/org-context';
 import { queryClient } from '@/lib/query-client';
 
 /**
@@ -71,10 +74,12 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <AnimatedSplashOverlay />
-          <RootNavigator />
-        </ThemeProvider>
+        <OrgProvider>
+          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+            <AnimatedSplashOverlay />
+            <RootNavigator />
+          </ThemeProvider>
+        </OrgProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

@@ -109,6 +109,8 @@ src/
     api.ts        # API_URL (platform-aware, EXPO_PUBLIC_API_URL override)
     query-client.ts  # singleton React Query client
     trpc.ts       # typed tRPC client + org-context / cookie getter seams
+    org-context.tsx  # OrgProvider/useOrg — effective org + superadmin switch
+    org-storage.ts   # persisted org selection (expo-secure-store; .web.ts → localStorage)
     auth/         # cookie jar, auth service, AuthProvider/useAuth, barrel
       cookie-jar.ts     # @react-native-cookies/cookies + expo-secure-store
       auth-service.ts   # login/logout (fetch) + AuthUser / AuthError
@@ -133,7 +135,9 @@ This repo is built with AI agents. Before any code is written, read:
 
 The login/cookie flow is now wired: [`src/lib/auth/`](./src/lib/auth/) captures and persists the session cookie (registering `setCookieGetter` from [`src/lib/trpc.ts`](./src/lib/trpc.ts)), bootstraps the session on launch via `auth.me`, and gates routing between [`src/app/login.tsx`](./src/app/login.tsx) and the authenticated `src/app/(tabs)/` group.
 
-The remaining roadmap is the org-context switcher (registers `setOrgContextGetter`, defaulting to the user's org) and the first project/runs screen. See the end of [ai/RULES.md](./ai/RULES.md) for detail.
+The org-context layer is now wired: [`src/lib/org-context.tsx`](./src/lib/org-context.tsx) registers `setOrgContextGetter` from [`src/lib/trpc.ts`](./src/lib/trpc.ts), derives the effective org from `auth.me` (members are pinned to their own org; superadmins may switch), persists a superadmin's choice via `expo-secure-store` (with a `localStorage` web split in [`src/lib/org-storage.ts`](./src/lib/org-storage.ts)), and invalidates React Query on switch. The superadmin-only switcher lives in [`src/components/org-switcher.tsx`](./src/components/org-switcher.tsx) and self-hides for members.
+
+The remaining roadmap is the first project/runs screen. See the end of [ai/RULES.md](./ai/RULES.md) for detail.
 
 ## License
 
