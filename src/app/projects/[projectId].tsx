@@ -18,7 +18,7 @@ import { EmptyState, ErrorState, Loading } from '@/components/query-states';
 import { RunStatusBadge } from '@/components/run-status-badge';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useProjectRuns } from '@/hooks/use-project-runs';
 
 /** Narrow view of the run fields this screen renders. */
@@ -63,7 +63,7 @@ export default function ProjectRunsScreen() {
           style={styles.list}
           contentContainerStyle={[
             styles.content,
-            { paddingBottom: insets.bottom + BottomTabInset + Spacing.three },
+            { paddingBottom: insets.bottom + Spacing.three },
           ]}
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
           ListEmptyComponent={<EmptyState message="No runs for this project yet." />}

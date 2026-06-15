@@ -12,13 +12,14 @@
  * stays typed (no `any`) and tolerates optional fields the contract may omit.
  */
 import { router } from 'expo-router';
+import { Stack } from 'expo-router/stack';
 import { FlatList, Pressable, RefreshControl, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EmptyState, ErrorState, Loading } from '@/components/query-states';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useProjects } from '@/hooks/use-projects';
 
 /** Narrow view of the `projects.list` output fields this screen renders. */
@@ -35,52 +36,51 @@ export default function ProjectsListScreen() {
   const { data, isPending, isError, error, refetch, isRefetching } = useProjects();
   const projects = (data ?? []) as ProjectListItem[];
 
-  if (isPending) {
-    return <Loading message="Loading projects…" />;
-  }
-
-  if (isError) {
-    return <ErrorState message={error instanceof Error ? error.message : undefined} onRetry={refetch} />;
-  }
-
   return (
     <ThemedView style={styles.container}>
-      <FlatList
-        data={projects}
-        keyExtractor={(item) => item.id}
-        style={styles.list}
-        contentContainerStyle={[
-          styles.content,
-          { paddingBottom: insets.bottom + BottomTabInset + Spacing.three },
-        ]}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
-        ListEmptyComponent={<EmptyState message="No projects yet." />}
-        renderItem={({ item }) => {
-          const subtitle = item.repoFullName ?? item.fullName ?? item.description;
-          return (
-            <Pressable
-              accessibilityRole="button"
-              onPress={() =>
-                router.push({
-                  pathname: '/projects/[projectId]',
-                  params: { projectId: item.id, name: item.name },
-                })
-              }
-              style={({ pressed }) => pressed && styles.pressed}>
-              <ThemedView type="backgroundElement" style={styles.row}>
-                <ThemedText type="smallBold" numberOfLines={1}>
-                  {item.name}
-                </ThemedText>
-                {subtitle ? (
-                  <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-                    {subtitle}
+      <Stack.Screen options={{ title: 'Projects' }} />
+      {isPending ? (
+        <Loading message="Loading projects…" />
+      ) : isError ? (
+        <ErrorState message={error instanceof Error ? error.message : undefined} onRetry={refetch} />
+      ) : (
+        <FlatList
+          data={projects}
+          keyExtractor={(item) => item.id}
+          style={styles.list}
+          contentContainerStyle={[
+            styles.content,
+            { paddingBottom: insets.bottom + Spacing.three },
+          ]}
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
+          ListEmptyComponent={<EmptyState message="No projects yet." />}
+          renderItem={({ item }) => {
+            const subtitle = item.repoFullName ?? item.fullName ?? item.description;
+            return (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() =>
+                  router.push({
+                    pathname: '/projects/[projectId]',
+                    params: { projectId: item.id, name: item.name },
+                  })
+                }
+                style={({ pressed }) => pressed && styles.pressed}>
+                <ThemedView type="backgroundElement" style={styles.row}>
+                  <ThemedText type="smallBold" numberOfLines={1}>
+                    {item.name}
                   </ThemedText>
-                ) : null}
-              </ThemedView>
-            </Pressable>
-          );
-        }}
-      />
+                  {subtitle ? (
+                    <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+                      {subtitle}
+                    </ThemedText>
+                  ) : null}
+                </ThemedView>
+              </Pressable>
+            );
+          }}
+        />
+      )}
     </ThemedView>
   );
 }

@@ -44,7 +44,7 @@ function prettify(status: string): string {
 export function RunStatusBadge({ status }: { status: string }) {
   const known = STATUS_STYLES[status.toLowerCase()];
   const color = known?.color ?? NEUTRAL;
-  const label = known?.label ?? prettify(status) ?? status;
+  const label = known?.label ?? prettify(status);
 
   return (
     <View style={[styles.badge, { backgroundColor: `${color}22`, borderColor: color }]}>
