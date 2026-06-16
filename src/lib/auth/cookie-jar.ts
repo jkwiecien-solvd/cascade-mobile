@@ -36,7 +36,7 @@
 import CookieManager from '@preeternal/react-native-cookie-manager';
 import * as SecureStore from 'expo-secure-store';
 
-import { API_URL } from '../api';
+import { getApiUrl } from '../api';
 
 /**
  * Secure-store key holding the serialized `Cookie:` header (e.g. `"a=1; b=2"`).
@@ -64,7 +64,7 @@ function serializeCookies(cookies: Record<string, { name: string; value: string 
  * (no name filtering), and update both the in-memory cache and secure-store.
  */
 async function refreshCache(): Promise<void> {
-  const cookies = await CookieManager.get(API_URL);
+  const cookies = await CookieManager.get(getApiUrl());
   const header = serializeCookies(cookies);
   cookieHeaderCache = header;
   if (header) {
@@ -81,7 +81,7 @@ async function refreshCache(): Promise<void> {
 export async function captureFromResponse(response: Response): Promise<void> {
   const setCookie = response.headers.get('set-cookie');
   if (setCookie) {
-    await CookieManager.setFromResponse(API_URL, setCookie);
+    await CookieManager.setFromResponse(getApiUrl(), setCookie);
   }
   await refreshCache();
 }
@@ -99,7 +99,7 @@ export async function restoreCookies(): Promise<void> {
   // Reconcile with the native jar (it may hold a fresher/rotated value, or be
   // empty after eviction in which case the persisted value above still seeds
   // the cache for the first request).
-  const cookies = await CookieManager.get(API_URL);
+  const cookies = await CookieManager.get(getApiUrl());
   const header = serializeCookies(cookies);
   if (header) {
     cookieHeaderCache = header;

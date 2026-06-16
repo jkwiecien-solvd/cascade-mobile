@@ -13,6 +13,10 @@ export default function RootIndex() {
     return null;
   }
 
+  if (status === 'need_connection') {
+    return <Redirect href="/welcome" />;
+  }
+
   if (status === 'unauthenticated') {
     return <Redirect href="/login" />;
   }

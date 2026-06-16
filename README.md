@@ -1,6 +1,6 @@
 # Cascade Mobile
 
-A React Native (Expo) mobile client for **[Cascade](../cascade)** — the open-source platform that orchestrates AI agents (Claude Code, Codex, opencode, LLMist) across software-development workflows in GitHub, Trello, Jira, and Linear.
+A React Native (Expo) mobile client for **[Cascade](https://github.com/mongrel-intelligence/cascade)** — the open-source platform that orchestrates AI agents (Claude Code, Codex, opencode, LLMist) across software-development workflows in GitHub, Trello, Jira, and Linear.
 
 This app is a thin client of Cascade's **Dashboard API** — the same tRPC API the existing `web/` dashboard consumes. It reuses the backend's `AppRouter` type for end-to-end type safety, so screens are built against the real server contract with no hand-written DTOs.
 

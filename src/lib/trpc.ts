@@ -3,7 +3,7 @@ import { createTRPCOptionsProxy } from '@trpc/tanstack-react-query';
 
 import type { AppRouter } from '../../../cascade/src/api/router';
 
-import { API_URL } from './api';
+import { API_URL, getApiUrl } from './api';
 import { queryClient } from './query-client';
 
 type Getter<T> = () => T;
@@ -41,6 +41,27 @@ const trpcClient = createTRPCClient<AppRouter>({
   links: [
     httpBatchLink({
       url: `${API_URL}/trpc`,
+      fetch(input, init) {
+        let urlStr: string;
+        if (typeof input === 'string') {
+          urlStr = input;
+        } else if (input instanceof URL) {
+          urlStr = input.toString();
+        } else {
+          urlStr = input.url;
+        }
+
+        const updatedUrl = urlStr.replace(API_URL, getApiUrl());
+
+        if (typeof input === 'string') {
+          return fetch(updatedUrl, init);
+        } else if (input instanceof URL) {
+          return fetch(new URL(updatedUrl), init);
+        } else {
+          const newRequest = new Request(updatedUrl, input);
+          return fetch(newRequest, init);
+        }
+      },
       headers() {
         const headers: Record<string, string> = {};
         const orgId = orgContextGetter?.();

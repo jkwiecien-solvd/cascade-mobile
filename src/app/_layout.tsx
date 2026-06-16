@@ -49,14 +49,19 @@ function useProtectedRoute(status: AuthStatus) {
     if (status === 'bootstrapping') return;
 
     const isAtLogin = segments[0] === 'login';
+    const isAtWelcome = segments[0] === 'welcome';
 
-    if (status === 'unauthenticated') {
-      if (!isAtLogin) {
+    if (status === 'need_connection') {
+      if (!isAtWelcome) {
+        router.replace('/welcome');
+      }
+    } else if (status === 'unauthenticated') {
+      if (!isAtLogin && !isAtWelcome) {
         router.replace('/login');
       }
     } else if (status === 'authenticated') {
       const isAtRoot = (segments as string[]).length === 0;
-      if (isAtLogin || isAtRoot) {
+      if (isAtLogin || isAtWelcome || isAtRoot) {
         router.replace('/runs');
       }
     }

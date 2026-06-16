@@ -11,7 +11,7 @@
  * {@link captureFromResponse} so the `Set-Cookie` is persisted and re-sent on
  * every subsequent request.
  */
-import { API_URL } from '../api';
+import { getApiUrl } from '../api';
 
 import { captureFromResponse, clearCookies, getCookieHeaderSync } from './cookie-jar';
 
@@ -62,7 +62,7 @@ async function readErrorMessage(response: Response, fallback: string): Promise<s
  * non-ok response.
  */
 export async function login(email: string, password: string): Promise<AuthUser> {
-  const response = await fetch(`${API_URL}/api/auth/login`, {
+  const response = await fetch(`${getApiUrl()}/api/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
@@ -87,7 +87,7 @@ export async function login(email: string, password: string): Promise<AuthUser> 
 export async function logout(): Promise<void> {
   try {
     const cookie = getCookieHeaderSync();
-    await fetch(`${API_URL}/api/auth/logout`, {
+    await fetch(`${getApiUrl()}/api/auth/logout`, {
       method: 'POST',
       credentials: 'include',
       headers: cookie ? { Cookie: cookie } : undefined,

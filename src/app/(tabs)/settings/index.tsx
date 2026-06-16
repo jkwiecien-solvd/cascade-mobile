@@ -18,6 +18,7 @@ import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useAuth } from '@/lib/auth';
 import { useOrg } from '@/lib/org-context';
+import { getApiUrl } from '@/lib/api';
 
 /** A labelled value row used for the account fields. */
 function InfoRow({ label, value }: { label: string; value: string }) {
@@ -35,7 +36,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { availableOrgs, effectiveOrgId } = useOrg();
 
   // `availableOrgs` is only populated for superadmins; members can't switch, so
@@ -74,6 +75,21 @@ export default function SettingsScreen() {
             <ThemedText type="smallBold">Users</ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
               Manage who has access
+            </ThemedText>
+          </ThemedView>
+        </Pressable>
+
+        <Pressable
+          accessibilityRole="button"
+          onPress={async () => {
+            await signOut();
+            router.push('/welcome');
+          }}
+          style={({ pressed }) => pressed && styles.pressed}>
+          <ThemedView type="backgroundElement" style={styles.linkRow}>
+            <ThemedText type="smallBold">Cascade Instance</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+              {getApiUrl()} (Change)
             </ThemedText>
           </ThemedView>
         </Pressable>
