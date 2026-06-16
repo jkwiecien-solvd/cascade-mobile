@@ -68,11 +68,9 @@ function MetaText({ text }: { text: string }) {
 
 export function RunCard({
   run,
-  showOrg,
   onPress,
 }: {
   run: RunListItem;
-  showOrg: boolean;
   onPress: () => void;
 }) {
   const relative = formatRelativeTime(run.startedAt);
@@ -114,7 +112,7 @@ export function RunCard({
           </ThemedText>
         ) : null}
         {run.workItemTitle ? (
-          <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+          <ThemedText type="small" themeColor="textSecondary" numberOfLines={3}>
             {run.workItemTitle}
           </ThemedText>
         ) : null}
@@ -131,12 +129,6 @@ export function RunCard({
           </View>
         ) : null}
 
-        {/* Org name — only for superadmins (mirrors web `showOrg`). */}
-        {showOrg && run.orgName ? (
-          <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-            {run.orgName}
-          </ThemedText>
-        ) : null}
       </Pressable>
 
       {/* PR affordance — rendered outside the navigation Pressable so tapping

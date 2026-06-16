@@ -48,8 +48,9 @@ export type RunFilters = {
 
 /** Build the procedure input, including only the filter keys that are set. */
 function buildInput(filters: RunFilters, limit: number, offset: number) {
-  const input: Record<string, string | number> = { limit, offset };
-  if (filters.status) input.status = filters.status;
+  const input: Record<string, string | string[] | number> = { limit, offset };
+  // Backend expects `status` as `z.array(z.string())`, not a bare string.
+  if (filters.status) input.status = [filters.status];
   if (filters.agentType) input.agentType = filters.agentType;
   if (filters.projectId) input.projectId = filters.projectId;
   return input;
@@ -60,12 +61,18 @@ export function useRuns(filters: RunFilters = {}) {
 
   const query = useInfiniteQuery({
     queryKey: ['runs.list', filters],
-    queryFn: ({ pageParam }) =>
-      // The bare client returns the inferred `runs.list` output (an array page).
-      trpcClient.runs.list.query(buildInput(filters, PAGE_SIZE, pageParam)),
+    queryFn: async ({ pageParam }) => {
+      // The backend returns `{ data: Run[], total: number }`; unwrap to the array.
+      const result = await trpcClient.runs.list.query(
+        buildInput(filters, PAGE_SIZE, pageParam),
+      );
+      return (result as { data: unknown[] }).data;
+    },
     initialPageParam: 0,
     getNextPageParam: (lastPage, allPages) =>
-      lastPage.length === PAGE_SIZE ? allPages.length * PAGE_SIZE : undefined,
+      (lastPage as unknown[]).length === PAGE_SIZE
+        ? allPages.length * PAGE_SIZE
+        : undefined,
     enabled: isReady,
   });
 

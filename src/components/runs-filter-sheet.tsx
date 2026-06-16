@@ -92,7 +92,7 @@ export function RunsFilterSheet({
         <Pressable
           style={[styles.sheetWrapper, { paddingBottom: insets.bottom + Spacing.four }]}
           onPress={(event) => event.stopPropagation()}>
-          <ThemedView type="backgroundElement" style={styles.sheet}>
+          <ThemedView type="background" style={styles.sheet}>
             <ThemedView style={styles.header}>
               <ThemedText type="smallBold">Filter runs</ThemedText>
               {hasFilters ? (

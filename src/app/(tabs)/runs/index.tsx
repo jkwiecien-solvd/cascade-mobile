@@ -36,12 +36,12 @@ import {
   RunsFilterSheet,
 } from '@/components/runs-filter-sheet';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import { type RunFilters, useRuns } from '@/hooks/use-runs';
-import { useIsSuperadmin } from '@/lib/auth';
 
 export default function RunsScreen() {
   const insets = useSafeAreaInsets();
-  const showOrg = useIsSuperadmin();
+  const theme = useTheme();
   const [filters, setFilters] = useState<RunFilters>({});
   const [filterOpen, setFilterOpen] = useState(false);
 
@@ -117,10 +117,12 @@ export default function RunsScreen() {
               </View>
             ) : null
           }
+          ItemSeparatorComponent={() => (
+            <View style={[styles.separator, { backgroundColor: theme.textSecondary }]} />
+          )}
           renderItem={({ item }) => (
             <RunCard
               run={item}
-              showOrg={showOrg}
               onPress={() =>
                 router.push({ pathname: '/runs/[runId]', params: { runId: item.id } })
               }
@@ -161,5 +163,10 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingVertical: Spacing.three,
+  },
+  separator: {
+    height: StyleSheet.hairlineWidth,
+    marginHorizontal: Spacing.two,
+    opacity: 0.25,
   },
 });
