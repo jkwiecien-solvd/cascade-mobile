@@ -9,7 +9,7 @@
  */
 
 /** Coerce an ISO string, epoch-millis number, or `Date` into millis, or `null`. */
-function toMillis(input: string | number | Date | null | undefined): number | null {
+export function toMillis(input: string | number | Date | null | undefined): number | null {
   if (input == null) return null;
   if (input instanceof Date) {
     const ms = input.getTime();

@@ -23,7 +23,7 @@
  */
 import { router } from 'expo-router';
 import { Stack } from 'expo-router/stack';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -57,7 +57,19 @@ export default function RunsScreen() {
     error,
   } = useRuns(filters);
 
-  const items = runs as RunListItem[];
+  // Narrow to the rendered view and dedupe by `id`. The dedupe is a defensive
+  // guard: if the backend ever returns overlapping pages (e.g. a paging input
+  // key is named differently than assumed and silently ignored), this keeps
+  // `keyExtractor={item.id}` from emitting duplicate-key warnings rather than
+  // crashing the list.
+  const items = useMemo(() => {
+    const seen = new Set<string>();
+    return (runs as RunListItem[]).filter((run) => {
+      if (seen.has(run.id)) return false;
+      seen.add(run.id);
+      return true;
+    });
+  }, [runs]);
   const filterCount = activeFilterCount(filters);
   const hasActiveFilters = filterCount > 0;
 

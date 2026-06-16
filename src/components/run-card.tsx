@@ -15,6 +15,13 @@
  * narrowing idiom used by `org-context.tsx` / `projects/index.tsx`) — so the
  * card stays typed (no `any`) and tolerates optional/renamed fields the
  * contract may omit.
+ *
+ * Caveat: because the consumer casts (`runs as RunListItem[]`) and every field
+ * but `id` is optional, a *misnamed* field (e.g. `cost` vs `costUsd`) is NOT a
+ * compile error — it simply renders blank. The cast only guarantees the array
+ * shape, not the field names. These names must be confirmed against
+ * `../cascade/src/api/routers/runs.ts` in a checkout where `AppRouter` resolves;
+ * they cannot be statically verified here.
  */
 import { type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
