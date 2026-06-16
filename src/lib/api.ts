@@ -20,4 +20,5 @@ function resolveDefault(): string {
  * (e.g. `EXPO_PUBLIC_API_URL=http://192.168.1.42:3001`). This cannot be
  * auto-detected at build time.
  */
-export const API_URL: string = process.env.EXPO_PUBLIC_API_URL ?? resolveDefault();
+export const API_URL: string = process.env.EXPO_PUBLIC_API_URL || resolveDefault();
+

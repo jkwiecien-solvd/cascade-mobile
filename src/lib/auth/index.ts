@@ -3,6 +3,7 @@
  * reaching into individual modules.
  */
 export { AuthProvider, useAuth } from './auth-provider';
+export { useIsSuperadmin } from './use-is-superadmin';
 export { AuthError } from './auth-service';
 export type { AuthState, AuthStatus } from './auth-provider';
 export type { AuthUser } from './auth-service';

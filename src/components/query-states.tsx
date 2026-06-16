@@ -5,7 +5,7 @@
  * Centralising these here keeps the screens declarative (`if (isPending) return
  * <Loading />`) and avoids duplicating state UI. They are built from the
  * existing themed primitives and follow the `Pressable` + `pressed`-opacity
- * idiom used in `explore.tsx` / `org-switcher.tsx`.
+ * idiom used across the app's pressable components.
  */
 import { ActivityIndicator, Pressable, StyleSheet } from 'react-native';
 

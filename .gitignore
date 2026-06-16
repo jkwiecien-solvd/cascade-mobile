@@ -45,3 +45,6 @@ example
 
 # local symlinks
 /cascade-web
+
+# cascade tooling context
+/.cascade

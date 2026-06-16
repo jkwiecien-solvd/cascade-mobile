@@ -1,8 +1,8 @@
 /**
- * Projects list screen — the entry point of the first end-to-end typed feature
- * path. Fetches the org-scoped projects via {@link useProjects} and renders a
- * pull-to-refreshable `FlatList` of pressable rows that drill into the runs
- * detail screen.
+ * Projects list screen — now the Projects tab's root (relocated from the old
+ * top-level `projects/` group). Fetches the org-scoped projects via
+ * {@link useProjects} and renders a pull-to-refreshable `FlatList` of pressable
+ * rows that drill into the project detail (sections) screen.
  *
  * Type note: `useProjects()` returns data inferred from the backend `AppRouter`.
  * When the sibling `../cascade` repo is checked out those fields are statically

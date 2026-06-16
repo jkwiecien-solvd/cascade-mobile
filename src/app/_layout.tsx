@@ -36,6 +36,10 @@ import { queryClient } from '@/lib/query-client';
  * Redirect between the authenticated `(tabs)` group and the root `login` screen
  * based on auth status. No-op while `bootstrapping` (the caller renders a
  * spinner instead) to avoid a wrong-screen flash before the session is known.
+ *
+ * With named tab directories (`runs/`, `projects/`, …) there is no longer a
+ * leaf mapped to `/`, so an authenticated user landing from `login` is sent to
+ * the default **Runs** tab explicitly rather than to `/`.
  */
 function useProtectedRoute(status: AuthStatus) {
   const segments = useSegments();
@@ -44,12 +48,17 @@ function useProtectedRoute(status: AuthStatus) {
   useEffect(() => {
     if (status === 'bootstrapping') return;
 
-    const inAuthGroup = segments[0] === '(tabs)';
+    const isAtLogin = segments[0] === 'login';
 
-    if (status === 'unauthenticated' && inAuthGroup) {
-      router.replace('/login');
-    } else if (status === 'authenticated' && segments[0] === 'login') {
-      router.replace('/');
+    if (status === 'unauthenticated') {
+      if (!isAtLogin) {
+        router.replace('/login');
+      }
+    } else if (status === 'authenticated') {
+      const isAtRoot = (segments as string[]).length === 0;
+      if (isAtLogin || isAtRoot) {
+        router.replace('/runs');
+      }
     }
   }, [status, segments, router]);
 }

@@ -1,7 +1,7 @@
 import { createTRPCClient, httpBatchLink } from '@trpc/client';
 import { createTRPCOptionsProxy } from '@trpc/tanstack-react-query';
 
-import type { AppRouter } from '../../cascade/src/api/router';
+import type { AppRouter } from '../../../cascade/src/api/router';
 
 import { API_URL } from './api';
 import { queryClient } from './query-client';
