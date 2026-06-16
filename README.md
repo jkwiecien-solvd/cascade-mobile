@@ -96,17 +96,15 @@ For this to type-check, the cascade repo must be reachable at the resolved path.
 ```
 src/
   app/            # Expo Router routes (file-based). Entry: expo-router/entry
-    _layout.tsx   # Root layout: providers + <Stack> + auth gate (redirects)
+    _layout.tsx   # Root layout: providers + <Stack> + auth gate (redirects to /runs)
     login.tsx     # Unauthenticated login screen (outside the tab group)
-    (tabs)/       # Authenticated app (URL-transparent group)
+    (tabs)/       # Authenticated app — native bottom tabs (URL-transparent group)
       _layout.tsx # Renders the native tab bar (AppTabs)
-      index.tsx   # Home — links to the projects group
-      explore.tsx
-    projects/     # First feature path (own auth-guard Stack)
-      _layout.tsx # Auth redirect + nested Stack (headers on)
-      index.tsx   # Projects list (FlatList + pull-to-refresh)
-      [projectId].tsx # Project detail — runs list + status badges
-  components/     # Reusable UI (incl. logout-button.tsx, run-status-badge.tsx, query-states.tsx)
+      runs/       # Runs tab (default) — own Stack: feed + [runId] detail (IA placeholders)
+      projects/   # Projects tab — own Stack: list, [projectId] (sections), [projectId]/[section]
+      settings/   # Settings tab — own Stack: General (account + sign-out), users
+      global/     # Global tab (superadmin only) — own Stack + guard: hub + 4 admin placeholders
+  components/     # Reusable UI (app-tabs[.web], org-switcher[-header], logout-button, run-status-badge, query-states)
   constants/      # theme, etc.
   hooks/          # color scheme, theme, use-projects, use-project-runs
   lib/            # API client, query client, auth helpers (mirrors web/src/lib/)
@@ -140,9 +138,11 @@ The login/cookie flow is now wired: [`src/lib/auth/`](./src/lib/auth/) captures 
 
 The org-context layer is now wired: [`src/lib/org-context.tsx`](./src/lib/org-context.tsx) registers `setOrgContextGetter` from [`src/lib/trpc.ts`](./src/lib/trpc.ts), derives the effective org from `auth.me` (members are pinned to their own org; superadmins may switch), persists a superadmin's choice via `expo-secure-store` (with a `localStorage` web split in [`src/lib/org-storage.ts`](./src/lib/org-storage.ts)), and invalidates React Query on switch. The superadmin-only switcher lives in [`src/components/org-switcher.tsx`](./src/components/org-switcher.tsx) and self-hides for members.
 
-The first end-to-end feature path is now wired: a top-level [`src/app/projects/`](./src/app/projects/) route group (its own auth-guard `Stack`) lists org-scoped projects and drills into a project's **runs** with status badges, entered from a "View projects" link on the Home tab. Data flows through thin typed hooks ([`src/hooks/use-projects.ts`](./src/hooks/use-projects.ts), [`src/hooks/use-project-runs.ts`](./src/hooks/use-project-runs.ts)) that wrap `trpc.projects.list` / `trpc.runs.list`, gate on `useOrg().isReady`, and rely on end-to-end `AppRouter` inference (no hand-written DTOs). Both screens reuse shared loading / empty / error views ([`src/components/query-states.tsx`](./src/components/query-states.tsx)) and a status pill ([`src/components/run-status-badge.tsx`](./src/components/run-status-badge.tsx)), with pull-to-refresh.
+The navigation IA is now built on **native bottom tabs** ([`src/components/app-tabs.tsx`](./src/components/app-tabs.tsx), with web parity in [`app-tabs.web.tsx`](./src/components/app-tabs.web.tsx)): **Runs** (default), **Projects**, **Settings**, and a superadmin-only **Global** hub, each backed by its own nested `Stack` under [`src/app/(tabs)/`](./src/app/(tabs)/) so deep screens push independently per tab. Projects is now a first-class tab — its list still drills into a project, whose detail is a **sections list** (General, Engine, Integrations, Agents, Lifecycle, Work, Stats) pushing generic section placeholders. The org switcher moved into a header-right control ([`src/components/org-switcher-header.tsx`](./src/components/org-switcher-header.tsx)) reachable from every tab, and account info + sign-out live in Settings. The Global tab is gated on `useIsSuperadmin()` ([`src/lib/auth/use-is-superadmin.ts`](./src/lib/auth/use-is-superadmin.ts), reading the `auth.me` `role`).
 
-The remaining roadmap (PR review status, promoting Projects to a first-class tab, etc.) builds on this path. See the end of [ai/RULES.md](./ai/RULES.md) for detail.
+Projects data still flows through thin typed hooks ([`src/hooks/use-projects.ts`](./src/hooks/use-projects.ts), [`src/hooks/use-project-runs.ts`](./src/hooks/use-project-runs.ts)) that wrap `trpc.projects.list` / `trpc.runs.list`, gate on `useOrg().isReady`, and rely on end-to-end `AppRouter` inference (no hand-written DTOs), reusing shared loading / empty / error views ([`src/components/query-states.tsx`](./src/components/query-states.tsx)) and a status pill ([`src/components/run-status-badge.tsx`](./src/components/run-status-badge.tsx)).
+
+The Runs / Settings / Global screens currently ship as navigation-ready IA placeholders; their feature content (the cross-project runs feed, user management, global admin) builds on this path in follow-up cards. See the end of [ai/RULES.md](./ai/RULES.md) for detail.
 
 ## License
 

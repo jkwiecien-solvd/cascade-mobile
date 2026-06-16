@@ -3,8 +3,7 @@
  * request is in flight. The auth gate handles the redirect to `/login` once the
  * status flips to `unauthenticated`, so there is no manual navigation here.
  *
- * Mounted on the home tab for now so the login → logout round-trip can be
- * verified end-to-end; final placement (header / profile tab) can land later.
+ * Mounted in Settings → General (`src/app/(tabs)/settings/index.tsx`).
  */
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet } from 'react-native';
