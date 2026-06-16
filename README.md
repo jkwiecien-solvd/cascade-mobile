@@ -100,13 +100,13 @@ src/
     login.tsx     # Unauthenticated login screen (outside the tab group)
     (tabs)/       # Authenticated app — native bottom tabs (URL-transparent group)
       _layout.tsx # Renders the native tab bar (AppTabs)
-      runs/       # Runs tab (default) — own Stack: feed + [runId] detail (IA placeholders)
+      runs/       # Runs tab (default) — own Stack: cross-project card feed + [runId] detail (placeholder)
       projects/   # Projects tab — own Stack: list, [projectId] (sections), [projectId]/[section]
       settings/   # Settings tab — own Stack: General (account + sign-out), users
       global/     # Global tab (superadmin only) — own Stack + guard: hub + 4 admin placeholders
-  components/     # Reusable UI (app-tabs[.web], org-switcher[-header], logout-button, run-status-badge, query-states)
+  components/     # Reusable UI (app-tabs[.web], org-switcher[-header], logout-button, run-status-badge, query-states, run-card, live-duration, filter-chips, runs-filter-sheet)
   constants/      # theme, etc.
-  hooks/          # color scheme, theme, use-projects, use-project-runs
+  hooks/          # color scheme, theme, use-projects, use-project-runs, use-runs
   lib/            # API client, query client, auth helpers (mirrors web/src/lib/)
     api.ts        # API_URL (platform-aware, EXPO_PUBLIC_API_URL override)
     query-client.ts  # singleton React Query client
@@ -142,7 +142,9 @@ The navigation IA is now built on **native bottom tabs** ([`src/components/app-t
 
 Projects data still flows through thin typed hooks ([`src/hooks/use-projects.ts`](./src/hooks/use-projects.ts), [`src/hooks/use-project-runs.ts`](./src/hooks/use-project-runs.ts)) that wrap `trpc.projects.list` / `trpc.runs.list`, gate on `useOrg().isReady`, and rely on end-to-end `AppRouter` inference (no hand-written DTOs), reusing shared loading / empty / error views ([`src/components/query-states.tsx`](./src/components/query-states.tsx)) and a status pill ([`src/components/run-status-badge.tsx`](./src/components/run-status-badge.tsx)).
 
-The Runs / Settings / Global screens currently ship as navigation-ready IA placeholders; their feature content (the cross-project runs feed, user management, global admin) builds on this path in follow-up cards. See the end of [ai/RULES.md](./ai/RULES.md) for detail.
+The **Runs feed is now wired** (no longer an IA placeholder): the Runs tab renders a mobile-native, cross-project card list via the new org-scoped infinite hook [`src/hooks/use-runs.ts`](./src/hooks/use-runs.ts) (wraps `trpc.runs.list`, offset/limit paging through the now-exported bare `trpcClient`, optional status/agent-type/project filters folded into the query key). Each run is a [`RunCard`](./src/components/run-card.tsx) (agent type + status badge → project / work item → relative-time · duration · cost · iterations · PR link), with a live-ticking elapsed time for running runs via [`LiveDuration`](./src/components/live-duration.tsx) and pure formatting helpers in [`src/lib/relative-time.ts`](./src/lib/relative-time.ts). Filtering uses a Modal bottom sheet ([`src/components/runs-filter-sheet.tsx`](./src/components/runs-filter-sheet.tsx)) of reusable [`FilterChips`](./src/components/filter-chips.tsx), opened from a header-right trigger composed next to the org switcher.
+
+The Settings / Global screens still ship as navigation-ready IA placeholders; their feature content (user management, global admin) builds on this path in follow-up cards. See the end of [ai/RULES.md](./ai/RULES.md) for detail.
 
 ## License
 

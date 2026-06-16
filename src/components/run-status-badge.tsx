@@ -29,6 +29,8 @@ const STATUS_STYLES: Record<string, { label: string; color: string }> = {
   completed: { label: 'Completed', color: '#30a46c' },
   failed: { label: 'Failed', color: '#e5484d' },
   error: { label: 'Error', color: '#e5484d' },
+  timed_out: { label: 'Timed out', color: '#d97706' },
+  'timed out': { label: 'Timed out', color: '#d97706' },
   cancelled: { label: 'Cancelled', color: '#d97706' },
   canceled: { label: 'Cancelled', color: '#d97706' },
 };

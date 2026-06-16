@@ -37,7 +37,14 @@ export function setCookieGetter(getter: Getter<string | null>): void {
   cookieGetter = getter;
 }
 
-const trpcClient = createTRPCClient<AppRouter>({
+/**
+ * Bare tRPC client (no React Query proxy). Exported so hooks that need
+ * imperative calls — e.g. the offset/limit `useInfiniteQuery` in
+ * `src/hooks/use-runs.ts`, where the cursor-based `infiniteQueryOptions` proxy
+ * does not fit the backend's paging shape — can call procedures directly while
+ * still flowing the same headers (org context + session cookie).
+ */
+export const trpcClient = createTRPCClient<AppRouter>({
   links: [
     httpBatchLink({
       url: `${API_URL}/trpc`,
