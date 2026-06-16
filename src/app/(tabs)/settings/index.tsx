@@ -38,8 +38,11 @@ export default function SettingsScreen() {
   const { user } = useAuth();
   const { availableOrgs, effectiveOrgId } = useOrg();
 
+  // `availableOrgs` is only populated for superadmins; members can't switch, so
+  // we have a name to show only when the active org is in that list. Otherwise
+  // fall back to a friendly label rather than leaking the opaque org id.
   const activeOrg = availableOrgs.find((org) => org.id === effectiveOrgId);
-  const orgLabel = activeOrg?.name ?? effectiveOrgId ?? 'Default organization';
+  const orgLabel = activeOrg?.name ?? 'Default organization';
 
   return (
     <ThemedView style={styles.container}>
