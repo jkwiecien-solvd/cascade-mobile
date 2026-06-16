@@ -48,12 +48,17 @@ function useProtectedRoute(status: AuthStatus) {
   useEffect(() => {
     if (status === 'bootstrapping') return;
 
-    const inAuthGroup = segments[0] === '(tabs)';
+    const isAtLogin = segments[0] === 'login';
 
-    if (status === 'unauthenticated' && inAuthGroup) {
-      router.replace('/login');
-    } else if (status === 'authenticated' && segments[0] === 'login') {
-      router.replace('/runs');
+    if (status === 'unauthenticated') {
+      if (!isAtLogin) {
+        router.replace('/login');
+      }
+    } else if (status === 'authenticated') {
+      const isAtRoot = (segments as string[]).length === 0;
+      if (isAtLogin || isAtRoot) {
+        router.replace('/runs');
+      }
     }
   }, [status, segments, router]);
 }
