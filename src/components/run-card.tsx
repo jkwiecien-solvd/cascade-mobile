@@ -42,7 +42,7 @@ export type RunListItem = {
   status?: string;
   startedAt?: string | number | Date;
   durationMs?: number;
-  costUsd?: number;
+  costUsd?: number | string;
   llmIterations?: number;
   prUrl?: string;
   prNumber?: number;

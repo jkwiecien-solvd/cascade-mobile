@@ -28,6 +28,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ExternalLink } from '@/components/external-link';
 import { EmptyState, ErrorState, Loading } from '@/components/query-states';
+import { RunLlmCalls } from '@/components/run-llm-calls';
 import { RunSectionTabs, RUN_SECTIONS, type RunSection } from '@/components/run-section-tabs';
 import { RunStatusBadge } from '@/components/run-status-badge';
 import { ThemedText } from '@/components/themed-text';
@@ -113,7 +114,11 @@ export default function RunDetailScreen() {
 
           {/* Section content */}
           <View style={[styles.sectionContent, { paddingBottom: insets.bottom + Spacing.three }]}>
-            <EmptyState message={activeSection.emptyMessage} />
+            {section === 'llm-calls' ? (
+              <RunLlmCalls runId={run.id} />
+            ) : (
+              <EmptyState message={activeSection.emptyMessage} />
+            )}
           </View>
         </>
       )}

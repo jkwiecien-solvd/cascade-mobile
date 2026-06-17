@@ -71,9 +71,41 @@ export function formatDuration(ms: number | null | undefined): string | null {
  * Format a USD cost as `"$0.12"`. Returns `null` for missing input so the
  * caller can omit the segment entirely (zero is a real value → `"$0.00"`).
  */
-export function formatCost(usd: number | null | undefined): string | null {
-  if (usd == null || !Number.isFinite(usd)) return null;
-  return `$${usd.toFixed(2)}`;
+export function formatCost(usd: number | string | null | undefined): string | null {
+  if (usd == null) return null;
+  const num = typeof usd === 'string' ? parseFloat(usd) : usd;
+  if (!Number.isFinite(num)) return null;
+  return `$${num.toFixed(2)}`;
+}
+
+/**
+ * Format a number as a comma-grouped string: `1234` → `"1,234"`.
+ * Returns `null` for `null`/`undefined`/non-finite input so the caller can omit
+ * the segment entirely. Uses a manual regex — **not** `toLocaleString` — because
+ * Hermes' `Intl` support is limited (`ai/RULES.md §2`).
+ */
+export function formatTokens(n: number | null | undefined): string | null {
+  if (n == null || !Number.isFinite(n)) return null;
+  return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+/**
+ * Format a USD cost with sub-cent awareness:
+ *   `0` → `"$0.00"`, `0.0012` → `"$0.0012"`, `1.50` → `"$1.50"`.
+ *
+ * Kept separate from {@link formatCost} (which is 2-decimal and intentionally
+ * correct for whole-run costs in `RunCard`) because per-call LLM costs are
+ * routinely sub-cent and would render as `$0.00` with 2 decimals.
+ *
+ * Returns `null` for missing/non-finite input (same guard convention).
+ */
+export function formatLlmCost(usd: number | string | null | undefined): string | null {
+  if (usd == null) return null;
+  const num = typeof usd === 'string' ? parseFloat(usd) : usd;
+  if (!Number.isFinite(num)) return null;
+  if (num === 0) return '$0.00';
+  if (Math.abs(num) < 0.01) return `$${num.toFixed(4)}`;
+  return `$${num.toFixed(2)}`;
 }
 
 /**
