@@ -29,6 +29,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ExternalLink } from '@/components/external-link';
 import { EmptyState, ErrorState, Loading } from '@/components/query-states';
 import { RunLlmCalls } from '@/components/run-llm-calls';
+import { RunOverview, type RunOverviewData } from '@/components/run-overview';
 import { RunSectionTabs, RUN_SECTIONS, type RunSection } from '@/components/run-section-tabs';
 import { RunStatusBadge } from '@/components/run-status-badge';
 import { ThemedText } from '@/components/themed-text';
@@ -37,11 +38,14 @@ import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useRun } from '@/hooks/use-run';
 import { formatAgentType } from '@/lib/relative-time';
 
-/** Narrow view of the `runs.getById` output fields this screen renders. */
-type RunDetail = {
-  id: string;
+/**
+ * Narrow view of the `runs.getById` output fields this screen renders.
+ * Intersects the overview fields (`RunOverviewData`) with the header-specific
+ * fields (agent type, work item / PR links) so the full run object flows to
+ * both the header card and the `RunOverview` section without a second cast.
+ */
+type RunDetail = RunOverviewData & {
   agentType?: string;
-  status?: string;
   workItemTitle?: string;
   workItemUrl?: string;
   prNumber?: number;
@@ -114,7 +118,9 @@ export default function RunDetailScreen() {
 
           {/* Section content */}
           <View style={[styles.sectionContent, { paddingBottom: insets.bottom + Spacing.three }]}>
-            {section === 'llm-calls' ? (
+            {section === 'overview' ? (
+              <RunOverview run={run} />
+            ) : section === 'llm-calls' ? (
               <RunLlmCalls runId={run.id} />
             ) : (
               <EmptyState message={activeSection.emptyMessage} />
