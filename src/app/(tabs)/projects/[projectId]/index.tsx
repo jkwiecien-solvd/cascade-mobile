@@ -1,8 +1,7 @@
 /**
  * Project detail — the project's **sections list**. Replaces the old runs-list
- * detail screen: it renders the seven project sections (General, Engine,
- * Integrations, Agents, Lifecycle, Work, Stats) as pressable rows that push the
- * generic `[section]` placeholder.
+ * detail screen: it renders the project sections (Work, Stats) as pressable
+ * rows that push the generic `[section]` placeholder.
  *
  * The project name arrives via the route param set by the list screen and is
  * used as the stack title (falling back to a generic title when absent), and is
@@ -23,11 +22,6 @@ import { MaxContentWidth, Spacing } from '@/constants/theme';
 
 /** The project sections, mirroring the web dashboard's project IA. */
 const SECTIONS: { section: string; label: string; description: string }[] = [
-  { section: 'general', label: 'General', description: 'Name, repository, and basics' },
-  { section: 'engine', label: 'Engine', description: 'Agent engine configuration' },
-  { section: 'integrations', label: 'Integrations', description: 'GitHub and PM provider links' },
-  { section: 'agents', label: 'Agents', description: 'Enabled agent types' },
-  { section: 'lifecycle', label: 'Lifecycle', description: 'Workflow stages and transitions' },
   { section: 'work', label: 'Work', description: 'Work items and runs' },
   { section: 'stats', label: 'Stats', description: 'Activity and throughput' },
 ];
