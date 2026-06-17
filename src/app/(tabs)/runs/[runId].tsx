@@ -19,6 +19,8 @@
  * against `../cascade/src/api/routers/runs.ts` in a checkout where `AppRouter`
  * resolves.
  */
+import { useState } from 'react';
+
 import { useLocalSearchParams } from 'expo-router';
 import { Stack } from 'expo-router/stack';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -26,6 +28,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ExternalLink } from '@/components/external-link';
 import { EmptyState, ErrorState, Loading } from '@/components/query-states';
+import { RunSectionTabs, RUN_SECTIONS, type RunSection } from '@/components/run-section-tabs';
 import { RunStatusBadge } from '@/components/run-status-badge';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -49,6 +52,9 @@ export default function RunDetailScreen() {
   const { runId } = useLocalSearchParams<{ runId: string }>();
   const { data, isPending, isError, error, refetch } = useRun(runId);
   const run = data as RunDetail | undefined;
+  const [section, setSection] = useState<RunSection>('overview');
+
+  const activeSection = RUN_SECTIONS.find((s) => s.key === section) ?? RUN_SECTIONS[0];
 
   return (
     <ThemedView style={styles.container}>
@@ -64,42 +70,52 @@ export default function RunDetailScreen() {
       ) : !run ? (
         <EmptyState message="Run not found." />
       ) : (
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={[
-            styles.content,
-            { paddingBottom: insets.bottom + Spacing.three },
-          ]}>
+        <>
           {/* Header card — status badge + links */}
-          {run.status || run.workItemUrl || run.prUrl ? (
-            <ThemedView type="backgroundElement" style={styles.card}>
-              {/* Status badge */}
-              {run.status ? (
-                <View style={styles.row}>
-                  <RunStatusBadge status={run.status} />
-                </View>
-              ) : null}
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={[
+              styles.headerContent,
+              { paddingBottom: Spacing.two },
+            ]}>
+            {run.status || run.workItemUrl || run.prUrl ? (
+              <ThemedView type="backgroundElement" style={styles.card}>
+                {/* Status badge */}
+                {run.status ? (
+                  <View style={styles.row}>
+                    <RunStatusBadge status={run.status} />
+                  </View>
+                ) : null}
 
-              {/* Work Item link */}
-              {run.workItemUrl ? (
-                <ExternalLink href={run.workItemUrl}>
-                  <ThemedText type="linkPrimary">
-                    {run.workItemTitle ?? 'View work item'}
-                  </ThemedText>
-                </ExternalLink>
-              ) : null}
+                {/* Work Item link */}
+                {run.workItemUrl ? (
+                  <ExternalLink href={run.workItemUrl}>
+                    <ThemedText type="linkPrimary">
+                      {run.workItemTitle ?? 'View work item'}
+                    </ThemedText>
+                  </ExternalLink>
+                ) : null}
 
-              {/* PR link */}
-              {run.prUrl ? (
-                <ExternalLink href={run.prUrl}>
-                  <ThemedText type="linkPrimary">
-                    {run.prNumber != null ? `PR #${run.prNumber}` : 'View PR'}
-                  </ThemedText>
-                </ExternalLink>
-              ) : null}
-            </ThemedView>
-          ) : null}
-        </ScrollView>
+                {/* PR link */}
+                {run.prUrl ? (
+                  <ExternalLink href={run.prUrl}>
+                    <ThemedText type="linkPrimary">
+                      {run.prNumber != null ? `PR #${run.prNumber}` : 'View PR'}
+                    </ThemedText>
+                  </ExternalLink>
+                ) : null}
+              </ThemedView>
+            ) : null}
+          </ScrollView>
+
+          {/* Section tab strip */}
+          <RunSectionTabs active={section} onChange={setSection} />
+
+          {/* Section content */}
+          <View style={[styles.sectionContent, { paddingBottom: insets.bottom + Spacing.three }]}>
+            <EmptyState message={activeSection.emptyMessage} />
+          </View>
+        </>
       )}
     </ThemedView>
   );
@@ -110,15 +126,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scroll: {
-    flex: 1,
     alignSelf: 'center',
     width: '100%',
     maxWidth: MaxContentWidth,
   },
-  content: {
+  headerContent: {
     padding: Spacing.three,
     gap: Spacing.two,
-    flexGrow: 1,
   },
   card: {
     paddingHorizontal: Spacing.three,
@@ -129,5 +143,8 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  sectionContent: {
+    flex: 1,
   },
 });
