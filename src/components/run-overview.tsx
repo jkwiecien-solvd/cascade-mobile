@@ -11,14 +11,28 @@
  *   **already-loaded `run` as a prop** (one fewer round-trip; contrast
  *   `RunLlmCalls`, which owns a separate endpoint).
  * - **Reuse** — `LiveDuration` (ticking `useEffect`+`setInterval`+cleanup)
- *   for running runs; `formatDuration` / `formatLlmCost` / `formatRelativeTime`
+ *   for running runs; `formatDuration` / `formatCost` / `formatRelativeTime`
  *   for completed runs; `Collapsible` for long output; and the `DetailRow`
  *   label/value idiom from `run-llm-calls.tsx`.
+ * - **Cost** uses `formatCost` (2-decimal) — *not* the sub-cent `formatLlmCost`
+ *   — because `costUsd` here is the whole-run cost, the same field `RunCard`
+ *   renders. `formatCost` is documented as the correct formatter for whole-run
+ *   costs; `formatLlmCost` is the per-call variant. Sharing one representation
+ *   keeps a run's cost identical in the feed card and this detail view.
  *
  * ## Type note
  * {@link RunOverviewData} is a narrow local view (same cross-repo narrowing
  * idiom as `RunListItem` / `LlmCallItem`); every field but `id` is optional
  * so missing/renamed contract fields render blank, never crash.
+ *
+ * Caveat (same as `run-card.tsx`): because the consumer casts (`data as
+ * RunDetail`) and every field but `id` is optional, a *misnamed* field (e.g.
+ * `triggerType` vs `trigger`) is NOT a compile error — it simply renders blank.
+ * These names must be confirmed against `../cascade/src/api/routers/runs.ts` in
+ * a checkout where `AppRouter` resolves (the sibling repo is absent here, so
+ * they cannot be statically verified). To limit the blast radius of a silent
+ * mismatch, `Result` falls back to the confirmed `status` field when `success`
+ * is absent (see `formatResult`).
  */
 import { ScrollView, StyleSheet, View } from 'react-native';
 
@@ -26,7 +40,7 @@ import { Collapsible } from '@/components/ui/collapsible';
 import { LiveDuration } from '@/components/live-duration';
 import { ThemedText } from '@/components/themed-text';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
-import { formatDuration, formatLlmCost, formatRelativeTime } from '@/lib/relative-time';
+import { formatCost, formatDuration, formatRelativeTime } from '@/lib/relative-time';
 
 // ─── Narrow local type ──────────────────────────────────────────────────────
 
@@ -59,6 +73,24 @@ export type RunOverviewData = {
 function isRunning(status: string | undefined): boolean {
   const s = status?.toLowerCase();
   return s === 'running' || s === 'in_progress';
+}
+
+/**
+ * Result label for the run. Prefers the explicit `success` boolean, but falls
+ * back to deriving Succeeded/Failed from the **confirmed** `status` field (the
+ * same vocabulary `RunStatusBadge` maps) when `success` is absent. This guards
+ * against the silent-blank risk flagged in review: if `success` were misnamed
+ * in the contract it would always be `undefined`, but the row still populates
+ * from `status` rather than staying permanently empty. Non-terminal states
+ * (running/queued/pending) return `null` so no premature result is shown.
+ */
+function formatResult(success: boolean | undefined, status: string | undefined): string | null {
+  if (success === true) return 'Succeeded';
+  if (success === false) return 'Failed';
+  const s = status?.toLowerCase();
+  if (s === 'succeeded' || s === 'success' || s === 'completed') return 'Succeeded';
+  if (s === 'failed' || s === 'error' || s === 'timed_out' || s === 'timed out') return 'Failed';
+  return null;
 }
 
 /**
@@ -102,12 +134,11 @@ export function RunOverview({ run }: { run: RunOverviewData }) {
         : `${run.llmIterations}`
       : null;
 
-  // Result: handle boolean explicitly so `false` still renders.
-  const result =
-    run.success === true ? 'Succeeded' : run.success === false ? 'Failed' : null;
+  // Result: explicit `success` boolean, else derived from the confirmed `status`.
+  const result = formatResult(run.success, run.status);
 
-  // Cost: sub-cent aware formatting.
-  const cost = formatLlmCost(run.costUsd);
+  // Cost: whole-run cost → 2-decimal `formatCost`, same as `RunCard`.
+  const cost = formatCost(run.costUsd);
 
   // Duration for completed runs.
   const completedDuration = formatDuration(run.durationMs);
