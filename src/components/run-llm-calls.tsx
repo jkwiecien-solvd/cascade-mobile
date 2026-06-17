@@ -26,7 +26,6 @@ import { EmptyState, ErrorState, Loading } from '@/components/query-states';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
 import { useRunLlmCalls } from '@/hooks/use-run-llm-calls';
 import { formatDuration, formatLlmCost, formatTokens } from '@/lib/relative-time';
 
@@ -77,18 +76,6 @@ function LlmCallRow({ item }: { item: LlmCallItem }) {
   const cachedStr = formatTokens(item.cachedTokens);
   const cost = formatLlmCost(item.costUsd);
   const duration = formatDuration(item.durationMs);
-
-  // Build the collapsed summary segments.
-  const summaryParts: string[] = [];
-  if (item.model) summaryParts.push(item.model);
-  if (inputStr && outputStr) {
-    summaryParts.push(`${inputStr} → ${outputStr}`);
-  } else if (inputStr) {
-    summaryParts.push(`${inputStr} in`);
-  } else if (outputStr) {
-    summaryParts.push(`${outputStr} out`);
-  }
-  if (cost) summaryParts.push(cost);
 
   // Tool call names.
   const toolCallNames = item.toolCalls
@@ -164,7 +151,7 @@ function LlmCallRow({ item }: { item: LlmCallItem }) {
                 <ThemedText type="small" themeColor="textSecondary">
                   Text preview
                 </ThemedText>
-                <ThemedText type="code" numberOfLines={open ? undefined : 2}>
+                <ThemedText type="code">
                   {item.textPreview}
                 </ThemedText>
               </View>
@@ -176,7 +163,7 @@ function LlmCallRow({ item }: { item: LlmCallItem }) {
                 <ThemedText type="small" themeColor="textSecondary">
                   Thinking preview
                 </ThemedText>
-                <ThemedText type="code" numberOfLines={open ? undefined : 2}>
+                <ThemedText type="code">
                   {item.thinkingPreview}
                 </ThemedText>
               </View>
@@ -192,7 +179,6 @@ function LlmCallRow({ item }: { item: LlmCallItem }) {
 
 export function RunLlmCalls({ runId }: { runId: string }) {
   const { data, isPending, isError, error, refetch } = useRunLlmCalls(runId);
-  const theme = useTheme();
 
   if (isPending) return <Loading message="Loading LLM calls…" />;
   if (isError) {
@@ -216,9 +202,6 @@ export function RunLlmCalls({ runId }: { runId: string }) {
       keyExtractor={(item) => item.id}
       style={styles.list}
       contentContainerStyle={styles.listContent}
-      ItemSeparatorComponent={() => (
-        <View style={[styles.separator, { backgroundColor: theme.textSecondary }]} />
-      )}
       renderItem={({ item }) => <LlmCallRow item={item} />}
     />
   );
@@ -295,10 +278,5 @@ const styles = StyleSheet.create({
   previewBlock: {
     gap: Spacing.half,
     paddingVertical: Spacing.half,
-  },
-  separator: {
-    height: StyleSheet.hairlineWidth,
-    marginHorizontal: Spacing.two,
-    opacity: 0.25,
   },
 });
