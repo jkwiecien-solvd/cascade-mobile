@@ -8,7 +8,7 @@
  * `query-states.tsx` components (same pattern as `projects/index.tsx`).
  *
  * ## Type note
- * `runs.get`'s output is inferred from the backend `AppRouter` (sibling
+ * `runs.getById`'s output is inferred from the backend `AppRouter` (sibling
  * `../cascade` repo, absent in this checkout). Rendering reads the display
  * fields through {@link RunDetail} — a narrow local view (same cross-repo
  * narrowing idiom as `ProjectListItem` / `RunListItem`) — so the screen stays
@@ -33,7 +33,7 @@ import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useRun } from '@/hooks/use-run';
 import { formatAgentType } from '@/lib/relative-time';
 
-/** Narrow view of the `runs.get` output fields this screen renders. */
+/** Narrow view of the `runs.getById` output fields this screen renders. */
 type RunDetail = {
   id: string;
   agentType?: string;
@@ -71,32 +71,34 @@ export default function RunDetailScreen() {
             { paddingBottom: insets.bottom + Spacing.three },
           ]}>
           {/* Header card — status badge + links */}
-          <ThemedView type="backgroundElement" style={styles.card}>
-            {/* Status badge */}
-            {run.status ? (
-              <View style={styles.row}>
-                <RunStatusBadge status={run.status} />
-              </View>
-            ) : null}
+          {run.status || run.workItemUrl || run.prUrl ? (
+            <ThemedView type="backgroundElement" style={styles.card}>
+              {/* Status badge */}
+              {run.status ? (
+                <View style={styles.row}>
+                  <RunStatusBadge status={run.status} />
+                </View>
+              ) : null}
 
-            {/* Work Item link */}
-            {run.workItemUrl ? (
-              <ExternalLink href={run.workItemUrl}>
-                <ThemedText type="linkPrimary">
-                  {run.workItemTitle ?? 'View work item'}
-                </ThemedText>
-              </ExternalLink>
-            ) : null}
+              {/* Work Item link */}
+              {run.workItemUrl ? (
+                <ExternalLink href={run.workItemUrl}>
+                  <ThemedText type="linkPrimary">
+                    {run.workItemTitle ?? 'View work item'}
+                  </ThemedText>
+                </ExternalLink>
+              ) : null}
 
-            {/* PR link */}
-            {run.prUrl ? (
-              <ExternalLink href={run.prUrl}>
-                <ThemedText type="linkPrimary">
-                  {run.prNumber != null ? `PR #${run.prNumber}` : 'View PR'}
-                </ThemedText>
-              </ExternalLink>
-            ) : null}
-          </ThemedView>
+              {/* PR link */}
+              {run.prUrl ? (
+                <ExternalLink href={run.prUrl}>
+                  <ThemedText type="linkPrimary">
+                    {run.prNumber != null ? `PR #${run.prNumber}` : 'View PR'}
+                  </ThemedText>
+                </ExternalLink>
+              ) : null}
+            </ThemedView>
+          ) : null}
         </ScrollView>
       )}
     </ThemedView>

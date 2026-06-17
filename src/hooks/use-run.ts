@@ -9,7 +9,7 @@
  * see `org-context.tsx`) **and** on a truthy `runId`, so it never fires with
  * an empty id while the route param is still resolving.
  *
- * NOTE: the exact procedure name (`runs.get`) and its `{ runId }` input
+ * NOTE: the exact procedure name (`runs.getById`) and its `{ id }` input
  * follow the contract documented in the implementation plan. Confirm against
  * `../cascade/src/api/routers/runs.ts` when the sibling repo is checked out — the
  * compiler flags any mismatch immediately once `AppRouter` resolves.
@@ -23,7 +23,7 @@ export function useRun(runId: string | undefined) {
   const { isReady } = useOrg();
 
   return useQuery({
-    ...trpc.runs.get.queryOptions({ runId: runId ?? '' }),
+    ...trpc.runs.getById.queryOptions({ id: runId ?? '' }),
     enabled: isReady && !!runId,
   });
 }
