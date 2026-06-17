@@ -1,12 +1,7 @@
 /**
  * Web tab bar — the web counterpart of the native bottom tabs, sharing the same
  * route tree. It must stay in lockstep with `app-tabs.tsx`: the `name`/`href`
- * pairs map to the `(tabs)/<name>` stacks (Runs, Projects, Settings, and the
- * superadmin-only Global).
- *
- * Role gating mirrors native: the Global trigger renders only when
- * {@link useIsSuperadmin} is true, so non-superadmins get exactly three tabs and
- * `/global` is never linked for them.
+ * pairs map to the `(tabs)/<name>` stacks (Runs, Projects, and Settings).
  */
 import {
   Tabs,
@@ -22,11 +17,8 @@ import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
 
 import { MaxContentWidth, Spacing } from '@/constants/theme';
-import { useIsSuperadmin } from '@/lib/auth';
 
 export default function AppTabs() {
-  const isSuperadmin = useIsSuperadmin();
-
   return (
     <Tabs>
       <TabSlot style={{ height: '100%' }} />
@@ -41,11 +33,6 @@ export default function AppTabs() {
           <TabTrigger name="settings" href="/settings" asChild>
             <TabButton>Settings</TabButton>
           </TabTrigger>
-          {isSuperadmin ? (
-            <TabTrigger name="global" href="/global" asChild>
-              <TabButton>Global</TabButton>
-            </TabTrigger>
-          ) : null}
         </CustomTabList>
       </TabList>
     </Tabs>
