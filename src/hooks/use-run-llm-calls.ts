@@ -5,10 +5,8 @@
  * org-scoped via `x-org-context`, gated on `useOrg().isReady` and a truthy
  * `runId` so it never fires while the route param is still resolving.
  *
- * NOTE: the exact procedure name (`runs.getLlmCalls`) and its `{ runId }` input
- * are **unconfirmed** because `../cascade` is not checked out in this workspace.
- * Confirm against `../cascade/src/api/routers/runs.ts` when the sibling repo is
- * present — the compiler flags any mismatch immediately once `AppRouter` resolves.
+ * NOTE: the exact procedure name (`runs.listLlmCalls`) and its `{ runId }` input
+ * are confirmed against `../cascade/src/api/routers/runs.ts`.
  *
  * Fallback: if the backend already embeds the LLM calls on `runs.getById`'s
  * output, delete this hook and have the screen pass `run.llmCalls` straight
@@ -25,7 +23,7 @@ export function useRunLlmCalls(runId: string | undefined) {
   const { isReady } = useOrg();
 
   return useQuery({
-    ...trpc.runs.getLlmCalls.queryOptions({ runId: runId ?? '' }),
+    ...trpc.runs.listLlmCalls.queryOptions({ runId: runId ?? '' }),
     enabled: isReady && !!runId,
   });
 }

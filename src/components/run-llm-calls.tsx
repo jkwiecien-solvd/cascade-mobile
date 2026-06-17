@@ -6,7 +6,7 @@
  * model, tool call names, and text/thinking previews.
  *
  * ## Type note
- * `runs.getLlmCalls`'s output is inferred from the backend `AppRouter` (sibling
+ * `runs.listLlmCalls`'s output is inferred from the backend `AppRouter` (sibling
  * `../cascade` repo, absent in this checkout). Rendering reads the fields through
  * {@link LlmCallItem} — a narrow local view (same cross-repo narrowing idiom as
  * `RunListItem` in `run-card.tsx`) — so the component stays typed (no `any`) and
@@ -42,7 +42,7 @@ type LlmCallItem = {
   inputTokens?: number;
   outputTokens?: number;
   cachedTokens?: number;
-  costUsd?: number;
+  costUsd?: number | string;
   durationMs?: number;
   toolCalls?: ({ name?: string } | string)[];
   textPreview?: string;
@@ -88,37 +88,38 @@ function LlmCallRow({ item }: { item: LlmCallItem }) {
         accessibilityRole="button"
         onPress={() => setOpen((v) => !v)}
         style={({ pressed }) => [styles.pressable, pressed && styles.pressed]}>
-        {/* Collapsed row: chevron + summary line */}
-        <View style={styles.collapsedRow}>
-          <ThemedText
-            type="small"
-            themeColor="textSecondary"
-            style={styles.chevron}>
-            {open ? '▾' : '▸'}
-          </ThemedText>
-          <View style={styles.summaryContent}>
-            {item.model ? (
-              <ThemedText type="smallBold" numberOfLines={1} style={styles.modelText}>
-                {item.model}
+        {/* Collapsed row: summary line + (when closed) text preview */}
+        <View style={styles.summaryContent}>
+          {item.model ? (
+            <ThemedText type="smallBold" numberOfLines={1} style={styles.modelText}>
+              {item.model}
+            </ThemedText>
+          ) : null}
+          <View style={styles.metaRow}>
+            {inputStr && outputStr ? (
+              <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+                {inputStr} → {outputStr}
+              </ThemedText>
+            ) : inputStr ? (
+              <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+                {inputStr} in
               </ThemedText>
             ) : null}
-            <View style={styles.metaRow}>
-              {inputStr && outputStr ? (
-                <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-                  {inputStr} → {outputStr}
-                </ThemedText>
-              ) : inputStr ? (
-                <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-                  {inputStr} in
-                </ThemedText>
-              ) : null}
-              {cost ? (
-                <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-                  {cost}
-                </ThemedText>
-              ) : null}
-            </View>
+            {cost ? (
+              <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+                {cost}
+              </ThemedText>
+            ) : null}
           </View>
+          {!open && item.textPreview ? (
+            <ThemedText
+              type="small"
+              themeColor="textSecondary"
+              numberOfLines={2}
+              style={styles.collapsedPreview}>
+              {item.textPreview}
+            </ThemedText>
+          ) : null}
         </View>
       </Pressable>
 
@@ -190,7 +191,7 @@ export function RunLlmCalls({ runId }: { runId: string }) {
     );
   }
 
-  const items = (data ?? []) as LlmCallItem[];
+  const items = (data?.calls ?? []) as LlmCallItem[];
 
   if (items.length === 0) {
     return <EmptyState message="No LLM calls for this run." />;
@@ -233,18 +234,12 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.7,
   },
-  collapsedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-  },
-  chevron: {
-    width: 16,
-    textAlign: 'center',
-  },
   summaryContent: {
     flex: 1,
     gap: Spacing.half,
+  },
+  collapsedPreview: {
+    marginTop: Spacing.half,
   },
   modelText: {
     flexShrink: 1,

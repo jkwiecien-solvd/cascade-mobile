@@ -71,9 +71,11 @@ export function formatDuration(ms: number | null | undefined): string | null {
  * Format a USD cost as `"$0.12"`. Returns `null` for missing input so the
  * caller can omit the segment entirely (zero is a real value → `"$0.00"`).
  */
-export function formatCost(usd: number | null | undefined): string | null {
-  if (usd == null || !Number.isFinite(usd)) return null;
-  return `$${usd.toFixed(2)}`;
+export function formatCost(usd: number | string | null | undefined): string | null {
+  if (usd == null) return null;
+  const num = typeof usd === 'string' ? parseFloat(usd) : usd;
+  if (!Number.isFinite(num)) return null;
+  return `$${num.toFixed(2)}`;
 }
 
 /**
@@ -97,11 +99,13 @@ export function formatTokens(n: number | null | undefined): string | null {
  *
  * Returns `null` for missing/non-finite input (same guard convention).
  */
-export function formatLlmCost(usd: number | null | undefined): string | null {
-  if (usd == null || !Number.isFinite(usd)) return null;
-  if (usd === 0) return '$0.00';
-  if (Math.abs(usd) < 0.01) return `$${usd.toFixed(4)}`;
-  return `$${usd.toFixed(2)}`;
+export function formatLlmCost(usd: number | string | null | undefined): string | null {
+  if (usd == null) return null;
+  const num = typeof usd === 'string' ? parseFloat(usd) : usd;
+  if (!Number.isFinite(num)) return null;
+  if (num === 0) return '$0.00';
+  if (Math.abs(num) < 0.01) return `$${num.toFixed(4)}`;
+  return `$${num.toFixed(2)}`;
 }
 
 /**
