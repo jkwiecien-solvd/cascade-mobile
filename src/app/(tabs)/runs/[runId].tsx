@@ -126,6 +126,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scroll: {
+    flexShrink: 1,
     alignSelf: 'center',
     width: '100%',
     maxWidth: MaxContentWidth,
@@ -133,6 +134,7 @@ const styles = StyleSheet.create({
   headerContent: {
     padding: Spacing.three,
     gap: Spacing.two,
+    flexGrow: 1,
   },
   card: {
     paddingHorizontal: Spacing.three,
