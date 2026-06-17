@@ -1,22 +1,104 @@
 /**
- * Run detail — IA placeholder pushed from the runs feed so the drill-in path is
- * wired. The real run timeline / status / PR view is a follow-up card; this
- * screen reads the `runId` route param and shows it in a neutral empty state.
+ * Run detail header — replaces the placeholder with a real header screen that
+ * displays the run's agent type as the native header title, a status badge, and
+ * optional Work Item / PR links.
+ *
+ * Data flows through {@link useRun}, gated on `useOrg().isReady` and a truthy
+ * `runId`. The screen renders Loading / Error / not-found states via the shared
+ * `query-states.tsx` components (same pattern as `projects/index.tsx`).
+ *
+ * ## Type note
+ * `runs.get`'s output is inferred from the backend `AppRouter` (sibling
+ * `../cascade` repo, absent in this checkout). Rendering reads the display
+ * fields through {@link RunDetail} — a narrow local view (same cross-repo
+ * narrowing idiom as `ProjectListItem` / `RunListItem`) — so the screen stays
+ * typed (no `any`) and tolerates optional fields the contract may omit.
+ *
+ * Field names (`agentType`, `status`, `workItemTitle`, `workItemUrl`,
+ * `prNumber`, `prUrl`) match {@link RunListItem} in `run-card.tsx`. Confirm
+ * against `../cascade/src/api/routers/runs.ts` in a checkout where `AppRouter`
+ * resolves.
  */
 import { useLocalSearchParams } from 'expo-router';
 import { Stack } from 'expo-router/stack';
-import { StyleSheet } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { EmptyState } from '@/components/query-states';
+import { ExternalLink } from '@/components/external-link';
+import { EmptyState, ErrorState, Loading } from '@/components/query-states';
+import { RunStatusBadge } from '@/components/run-status-badge';
+import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { useRun } from '@/hooks/use-run';
+import { formatAgentType } from '@/lib/relative-time';
+
+/** Narrow view of the `runs.get` output fields this screen renders. */
+type RunDetail = {
+  id: string;
+  agentType?: string;
+  status?: string;
+  workItemTitle?: string;
+  workItemUrl?: string;
+  prNumber?: number;
+  prUrl?: string;
+};
 
 export default function RunDetailScreen() {
+  const insets = useSafeAreaInsets();
   const { runId } = useLocalSearchParams<{ runId: string }>();
+  const { data, isPending, isError, error, refetch } = useRun(runId);
+  const run = data as RunDetail | undefined;
 
   return (
     <ThemedView style={styles.container}>
-      <Stack.Screen options={{ title: 'Run' }} />
-      <EmptyState message={`Run detail for ${runId} is coming soon.`} />
+      <Stack.Screen options={{ title: formatAgentType(run?.agentType) }} />
+
+      {isPending ? (
+        <Loading message="Loading run…" />
+      ) : isError ? (
+        <ErrorState
+          message={error instanceof Error ? error.message : undefined}
+          onRetry={refetch}
+        />
+      ) : !run ? (
+        <EmptyState message="Run not found." />
+      ) : (
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={[
+            styles.content,
+            { paddingBottom: insets.bottom + Spacing.three },
+          ]}>
+          {/* Header card — status badge + links */}
+          <ThemedView type="backgroundElement" style={styles.card}>
+            {/* Status badge */}
+            {run.status ? (
+              <View style={styles.row}>
+                <RunStatusBadge status={run.status} />
+              </View>
+            ) : null}
+
+            {/* Work Item link */}
+            {run.workItemUrl ? (
+              <ExternalLink href={run.workItemUrl}>
+                <ThemedText type="linkPrimary">
+                  {run.workItemTitle ?? 'View work item'}
+                </ThemedText>
+              </ExternalLink>
+            ) : null}
+
+            {/* PR link */}
+            {run.prUrl ? (
+              <ExternalLink href={run.prUrl}>
+                <ThemedText type="linkPrimary">
+                  {run.prNumber != null ? `PR #${run.prNumber}` : 'View PR'}
+                </ThemedText>
+              </ExternalLink>
+            ) : null}
+          </ThemedView>
+        </ScrollView>
+      )}
     </ThemedView>
   );
 }
@@ -24,5 +106,26 @@ export default function RunDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  scroll: {
+    flex: 1,
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: MaxContentWidth,
+  },
+  content: {
+    padding: Spacing.three,
+    gap: Spacing.two,
+    flexGrow: 1,
+  },
+  card: {
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.three,
+    borderRadius: Spacing.three,
+    gap: Spacing.two,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 });
