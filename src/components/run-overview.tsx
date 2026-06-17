@@ -12,8 +12,9 @@
  *   `RunLlmCalls`, which owns a separate endpoint).
  * - **Reuse** — `LiveDuration` (ticking `useEffect`+`setInterval`+cleanup)
  *   for running runs; `formatDuration` / `formatCost` / `formatRelativeTime`
- *   for completed runs; `Collapsible` for long output; and the `DetailRow`
- *   label/value idiom from `run-llm-calls.tsx`.
+ *   for completed runs; and the `DetailRow` label/value idiom from
+ *   `run-llm-calls.tsx`. Output renders in an always-visible card (no
+ *   collapse) with a lighter font weight.
  * - **Cost** uses `formatCost` (2-decimal) — *not* the sub-cent `formatLlmCost`
  *   — because `costUsd` here is the whole-run cost, the same field `RunCard`
  *   renders. `formatCost` is documented as the correct formatter for whole-run
@@ -36,9 +37,9 @@
  */
 import { ScrollView, StyleSheet, View } from 'react-native';
 
-import { Collapsible } from '@/components/ui/collapsible';
 import { LiveDuration } from '@/components/live-duration';
 import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { formatCost, formatDuration, formatRelativeTime } from '@/lib/relative-time';
 
@@ -93,17 +94,6 @@ function formatResult(success: boolean | undefined, status: string | undefined):
   return null;
 }
 
-/**
- * Heuristic for "long" output: more than 160 characters or 3+ newlines.
- * RN cannot cheaply measure rendered line count pre-layout, so a
- * char/newline heuristic is a pragmatic stand-in.
- */
-function isLongOutput(text: string): boolean {
-  if (text.length > 160) return true;
-  const newlines = text.split('\n').length - 1;
-  return newlines >= 3;
-}
-
 // ─── OverviewRow ────────────────────────────────────────────────────────────
 
 /** A single label / value detail row (mirrors `DetailRow` from `run-llm-calls.tsx`). */
@@ -143,9 +133,8 @@ export function RunOverview({ run }: { run: RunOverviewData }) {
   // Duration for completed runs.
   const completedDuration = formatDuration(run.durationMs);
 
-  // Output summary collapsibility.
+  // Output summary — always shown in a card when present.
   const outputSummary = run.outputSummary ?? null;
-  const longOutput = outputSummary != null && isLongOutput(outputSummary);
 
   return (
     <ScrollView
@@ -190,17 +179,13 @@ export function RunOverview({ run }: { run: RunOverviewData }) {
         </View>
       ) : null}
 
-      {/* Output summary — collapsible when long, inline otherwise */}
+      {/* Output summary — always-visible card with a lighter font weight */}
       {outputSummary ? (
-        longOutput ? (
-          <View style={styles.outputBlock}>
-            <Collapsible title="Output">
-              <ThemedText type="default">{outputSummary}</ThemedText>
-            </Collapsible>
-          </View>
-        ) : (
-          <OverviewRow label="Output" value={outputSummary} />
-        )
+        <View style={styles.outputBlock}>
+          <ThemedView type="backgroundElement" style={styles.outputCard}>
+            <ThemedText style={styles.outputText}>{outputSummary}</ThemedText>
+          </ThemedView>
+        </View>
       ) : null}
     </ScrollView>
   );
@@ -238,5 +223,15 @@ const styles = StyleSheet.create({
   },
   outputBlock: {
     paddingVertical: Spacing.half,
+    gap: Spacing.one,
+  },
+  outputCard: {
+    borderRadius: Spacing.two,
+    padding: Spacing.three,
+  },
+  outputText: {
+    fontSize: 16,
+    lineHeight: 24,
+    fontWeight: '300',
   },
 });
