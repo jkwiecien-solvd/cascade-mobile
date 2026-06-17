@@ -126,6 +126,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scroll: {
+    flexGrow: 0,
     flexShrink: 1,
     alignSelf: 'center',
     width: '100%',
