@@ -1,35 +1,45 @@
 /**
- * RunLogs — presentational component for the Logs section of the run detail.
+ * RunLogs — Logs section of the run detail screen.
  *
- * Renders a two-segment sub-toggle (Cascade Log / Engine Log) above the
- * active log in monospaced text (`ThemedText type="code"`), inside a vertical
- * `ScrollView`. The screen owns the data; this component stays presentational
- * (mirrors `RunCard` / `RunSectionTabs` / `RunOverview`).
+ * Owns its own `runs.getLogs` query (keyed by `runId`) and renders a
+ * two-segment sub-toggle (Cascade Log / Engine Log) above the active log. The
+ * log is split into lines and each line is rendered as a separate `FlatList`
+ * item, with a search field above that filters the lines (case-insensitive
+ * substring match). Mirrors the web client's `log-viewer.tsx`, and the
+ * self-fetching idiom of sibling section `RunLlmCalls` (each section component
+ * owns its query by `runId`).
  *
  * ## Design decisions
+ * - **Self-fetching by `runId`** — the logs live on `runs.getLogs`, a separate
+ *   procedure from `runs.getById`, so the screen can't hand them down. Same
+ *   shape as `RunLlmCalls`/`useRunLlmCalls`.
+ * - **Line-per-item list** — splitting on `\n` lets the search field filter
+ *   individual lines while keeping the monospaced look. `FlatList`
+ *   virtualizes, so large logs stay performant.
  * - **Sub-toggle** reuses the `Pressable` + `ThemedView` + `ThemedText` strip
  *   idiom from `RunSectionTabs` — no new shared abstraction; a future
  *   `SegmentedToggle` extraction may happen once a third consumer appears.
  * - **Word-wrap by default** — natural `Text` wrapping is the most readable
  *   on narrow screens and avoids nested-scroll gesture conflicts.
- * - **Per-type empty state** via `EmptyState` from `query-states.tsx`.
+ * - **Loading / error / per-type empty state** via `query-states.tsx`.
  * - **`selectable`** on the log text so users can copy content.
- * - Virtualization / chunking is explicitly **out of scope** (follow-up).
  *
  * ## Type note
- * The `cascadeLog` / `engineLog` field names match the expected `runs.getById`
- * output. Confirm against `../cascade/src/api/routers/runs.ts` in a checkout
- * where `AppRouter` resolves — they cannot be statically verified here (same
- * cross-repo narrowing caveat as `RunOverview` / `RunCard`).
+ * `runs.getLogs`'s output (`{ cascadeLog, engineLog }`) is inferred from the
+ * backend `AppRouter`; the fields are read through the narrow {@link RunLogsData}
+ * view so the component stays typed (no `any`). Confirmed against
+ * `../cascade/src/api/routers/runs.ts` (`getLogs` → `getRunLogs`).
  */
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
-import { EmptyState } from '@/components/query-states';
+import { EmptyState, ErrorState, Loading } from '@/components/query-states';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { useRunLogs } from '@/hooks/use-run-logs';
+import { useTheme } from '@/hooks/use-theme';
 
 // ─── Sub-toggle model ──────────────────────────────────────────────────────
 
@@ -40,19 +50,55 @@ const LOG_TABS: readonly { key: LogType; label: string; emptyMessage: string }[]
   { key: 'engine', label: 'Engine Log', emptyMessage: 'No engine log available.' },
 ] as const;
 
-// ─── Component ──────────────────────────────────────────────────────────────
-
-export function RunLogs({
-  cascadeLog,
-  engineLog,
-}: {
+/**
+ * Narrow view of the `runs.getLogs` output fields this component renders.
+ * Both fields optional/nullable so a partial or empty row renders the per-type
+ * empty state, never crashes (same narrowing idiom as `RunListItem`).
+ */
+type RunLogsData = {
   cascadeLog?: string | null;
   engineLog?: string | null;
-}) {
+};
+
+/** One log line, keyed by its original index so filtering stays stable. */
+type LogLine = { id: number; text: string };
+
+// ─── Component ──────────────────────────────────────────────────────────────
+
+export function RunLogs({ runId }: { runId: string }) {
+  const { data, isPending, isError, error, refetch } = useRunLogs(runId);
+  const theme = useTheme();
   const [activeTab, setActiveTab] = useState<LogType>('cascade');
+  const [query, setQuery] = useState('');
+
+  const logs = (data ?? null) as RunLogsData | null;
+  const activeContent = activeTab === 'cascade' ? logs?.cascadeLog : logs?.engineLog;
+
+  // Split the active log into one item per line.
+  const lines = useMemo<LogLine[]>(() => {
+    if (!activeContent) return [];
+    return activeContent.split('\n').map((text, index) => ({ id: index, text }));
+  }, [activeContent]);
+
+  // Case-insensitive substring filter over the lines.
+  const trimmedQuery = query.trim().toLowerCase();
+  const filteredLines = useMemo<LogLine[]>(() => {
+    if (!trimmedQuery) return lines;
+    return lines.filter((line) => line.text.toLowerCase().includes(trimmedQuery));
+  }, [lines, trimmedQuery]);
+
+  if (isPending) return <Loading message="Loading logs…" />;
+  if (isError) {
+    return (
+      <ErrorState
+        message={error instanceof Error ? error.message : undefined}
+        onRetry={refetch}
+      />
+    );
+  }
+
   const activeLogTab = LOG_TABS.find((t) => t.key === activeTab) ?? LOG_TABS[0];
-  const activeContent = activeTab === 'cascade' ? cascadeLog : engineLog;
-  const hasContent = activeContent != null && activeContent.trim().length > 0;
+  const hasContent = lines.length > 0;
 
   return (
     <View style={styles.container}>
@@ -85,15 +131,41 @@ export function RunLogs({
         </ThemedView>
       </View>
 
-      {/* Log body or empty state */}
+      {/* Search field + line list, or per-type empty state */}
       {hasContent ? (
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.logContent}>
-          <ThemedText type="code" selectable>
-            {activeContent}
-          </ThemedText>
-        </ScrollView>
+        <View style={styles.body}>
+          <View style={styles.searchTray}>
+            <TextInput
+              style={[
+                styles.search,
+                { color: theme.text, backgroundColor: theme.backgroundElement },
+              ]}
+              value={query}
+              onChangeText={setQuery}
+              placeholder="Filter log lines…"
+              placeholderTextColor={theme.textSecondary}
+              autoCapitalize="none"
+              autoCorrect={false}
+              clearButtonMode="while-editing"
+            />
+          </View>
+
+          <FlatList
+            data={filteredLines}
+            keyExtractor={(item) => String(item.id)}
+            style={styles.list}
+            contentContainerStyle={styles.listContent}
+            keyboardShouldPersistTaps="handled"
+            renderItem={({ item }) => (
+              <ThemedText type="code" selectable style={styles.logLine}>
+                {item.text === '' ? ' ' : item.text}
+              </ThemedText>
+            )}
+            ListEmptyComponent={
+              <EmptyState message={`No lines match “${query.trim()}”.`} />
+            }
+          />
+        </View>
       ) : (
         <EmptyState message={activeLogTab.emptyMessage} />
       )}
@@ -131,14 +203,34 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.7,
   },
-  scroll: {
+  body: {
+    flex: 1,
+  },
+  searchTray: {
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: MaxContentWidth,
+    paddingHorizontal: Spacing.three,
+    paddingBottom: Spacing.two,
+  },
+  search: {
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    borderRadius: Spacing.three,
+    fontSize: 16,
+  },
+  list: {
     flex: 1,
     alignSelf: 'center',
     width: '100%',
     maxWidth: MaxContentWidth,
   },
-  logContent: {
-    padding: Spacing.three,
+  listContent: {
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
     flexGrow: 1,
+  },
+  logLine: {
+    paddingVertical: Spacing.half,
   },
 });

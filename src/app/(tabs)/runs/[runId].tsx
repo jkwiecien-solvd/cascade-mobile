@@ -51,10 +51,6 @@ type RunDetail = RunOverviewData & {
   workItemUrl?: string;
   prNumber?: number;
   prUrl?: string;
-  /** Cascade (orchestration) log — confirm field name against `../cascade/src/api/routers/runs.ts`. */
-  cascadeLog?: string | null;
-  /** Engine (execution) log — confirm field name against `../cascade/src/api/routers/runs.ts`. */
-  engineLog?: string | null;
 };
 
 export default function RunDetailScreen() {
@@ -126,7 +122,7 @@ export default function RunDetailScreen() {
             {section === 'overview' ? (
               <RunOverview run={run} />
             ) : section === 'logs' ? (
-              <RunLogs cascadeLog={run.cascadeLog} engineLog={run.engineLog} />
+              <RunLogs runId={run.id} />
             ) : section === 'llm-calls' ? (
               <RunLlmCalls runId={run.id} />
             ) : (
