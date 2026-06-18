@@ -43,8 +43,15 @@ export const AGENT_TYPE_FILTER_OPTIONS: FilterOption[] = [
 ].map((value) => ({ value, label: formatAgentType(value) }));
 
 /** Count of active (non-null) filter dimensions, for the trigger badge. */
-export function activeFilterCount(filters: RunFilters): number {
-  return [filters.status, filters.agentType, filters.projectId].filter(Boolean).length;
+export function activeFilterCount(
+  filters: RunFilters,
+  { includeProject = true }: { includeProject?: boolean } = {},
+): number {
+  let count = 0;
+  if (filters.status) count += 1;
+  if (filters.agentType) count += 1;
+  if (includeProject && filters.projectId) count += 1;
+  return count;
 }
 
 /** Narrow view of the `projects.list` output used to build project options. */
@@ -70,11 +77,14 @@ export function RunsFilterSheet({
   filters,
   onChange,
   onClose,
+  hideProjectFilter = false,
 }: {
   visible: boolean;
   filters: RunFilters;
   onChange: (filters: RunFilters) => void;
   onClose: () => void;
+  /** Hide the Project chips (e.g. when already inside a project screen). */
+  hideProjectFilter?: boolean;
 }) {
   const insets = useSafeAreaInsets();
   const { data } = useProjects();
@@ -83,7 +93,7 @@ export function RunsFilterSheet({
     label: project.name,
   }));
 
-  const hasFilters = activeFilterCount(filters) > 0;
+  const hasFilters = activeFilterCount(filters, { includeProject: !hideProjectFilter }) > 0;
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -98,7 +108,9 @@ export function RunsFilterSheet({
               {hasFilters ? (
                 <Pressable
                   accessibilityRole="button"
-                  onPress={() => onChange({})}
+                  onPress={() =>
+                    onChange(hideProjectFilter ? { projectId: filters.projectId } : {})
+                  }
                   style={({ pressed }) => pressed && styles.pressed}>
                   <ThemedText type="link">Clear all</ThemedText>
                 </Pressable>
@@ -121,7 +133,7 @@ export function RunsFilterSheet({
                 selected={filters.agentType ?? null}
                 onChange={(value) => onChange({ ...filters, agentType: value ?? undefined })}
               />
-              {projectOptions.length > 0 ? (
+              {!hideProjectFilter && projectOptions.length > 0 ? (
                 <FilterChips
                   label="Project"
                   options={projectOptions}
