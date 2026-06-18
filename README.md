@@ -104,7 +104,7 @@ src/
       projects/   # Projects tab — own Stack: list, [projectId] (sections), [projectId]/[section]
       settings/   # Settings tab — own Stack: General (account + sign-out), users
       global/     # Global tab (superadmin only) — own Stack + guard: hub + 4 admin placeholders
-  components/     # Reusable UI (app-tabs[.web], org-switcher[-header], logout-button, run-status-badge, query-states, run-card, run-llm-calls, live-duration, filter-chips, runs-filter-sheet)
+  components/     # Reusable UI (app-tabs[.web], org-switcher[-header], logout-button, run-status-badge, query-states, run-card, run-logs, run-llm-calls, live-duration, filter-chips, runs-filter-sheet)
   constants/      # theme, etc.
   hooks/          # color scheme, theme, use-projects, use-project-runs, use-runs, use-run, use-run-llm-calls
   lib/            # API client, query client, auth helpers (mirrors web/src/lib/)

@@ -29,6 +29,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ExternalLink } from '@/components/external-link';
 import { EmptyState, ErrorState, Loading } from '@/components/query-states';
 import { RunLlmCalls } from '@/components/run-llm-calls';
+import { RunLogs } from '@/components/run-logs';
 import { RunOverview, type RunOverviewData } from '@/components/run-overview';
 import { RunSectionTabs, RUN_SECTIONS, type RunSection } from '@/components/run-section-tabs';
 import { RunStatusBadge } from '@/components/run-status-badge';
@@ -50,6 +51,10 @@ type RunDetail = RunOverviewData & {
   workItemUrl?: string;
   prNumber?: number;
   prUrl?: string;
+  /** Cascade (orchestration) log — confirm field name against `../cascade/src/api/routers/runs.ts`. */
+  cascadeLog?: string | null;
+  /** Engine (execution) log — confirm field name against `../cascade/src/api/routers/runs.ts`. */
+  engineLog?: string | null;
 };
 
 export default function RunDetailScreen() {
@@ -120,6 +125,8 @@ export default function RunDetailScreen() {
           <View style={[styles.sectionContent, { paddingBottom: insets.bottom + Spacing.three }]}>
             {section === 'overview' ? (
               <RunOverview run={run} />
+            ) : section === 'logs' ? (
+              <RunLogs cascadeLog={run.cascadeLog} engineLog={run.engineLog} />
             ) : section === 'llm-calls' ? (
               <RunLlmCalls runId={run.id} />
             ) : (
