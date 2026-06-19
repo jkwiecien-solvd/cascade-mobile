@@ -22,6 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EmptyState, ErrorState, Loading } from '@/components/query-states';
 import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
 import { WorkItemCard, type WorkItem } from '@/components/work-item-card';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -50,7 +51,7 @@ export default function ProjectWorkScreen() {
   }, [items]);
 
   return (
-    <View style={styles.container}>
+    <ThemedView style={styles.container}>
       <Stack.Screen options={{ title: label ?? 'Work' }} />
 
       {isPending ? (
@@ -88,14 +89,14 @@ export default function ProjectWorkScreen() {
           }
           ListEmptyComponent={<EmptyState message="No work found for this project." />}
           ItemSeparatorComponent={() => (
-            <View style={[styles.separator, { backgroundColor: theme.textSecondary }]} />
+            <View style={[styles.separator, { backgroundColor: theme.border }]} />
           )}
           renderItem={({ item }) => (
             <WorkItemCard item={item} projectAvgDurationMs={projectAvgDurationMs} />
           )}
         />
       )}
-    </View>
+    </ThemedView>
   );
 }
 
@@ -121,7 +122,6 @@ const styles = StyleSheet.create({
     height: StyleSheet.hairlineWidth,
     marginVertical: Spacing.two,
     marginHorizontal: Spacing.two,
-    opacity: 0.25,
   },
   legend: {
     flexDirection: 'row',
