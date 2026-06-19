@@ -109,6 +109,20 @@ export function formatLlmCost(usd: number | string | null | undefined): string |
 }
 
 /**
+ * Format a 0–1 ratio as a rounded integer percent string: `0.9523` → `"95%"`.
+ * Returns `null` for `null`/`undefined`/non-finite input (same guard convention
+ * as {@link formatCost} / {@link formatDuration}). Clamps to 0–100. Computes
+ * manually (`Math.round`) — **not** `toLocaleString`/`Intl` (Hermes limitation,
+ * per the `formatTokens` note above).
+ */
+export function formatPercentage(ratio: number | null | undefined): string | null {
+  if (ratio == null || !Number.isFinite(ratio)) return null;
+  const pct = Math.round(ratio * 100);
+  const clamped = Math.max(0, Math.min(100, pct));
+  return `${clamped}%`;
+}
+
+/**
  * Prettify an agent-type slug for display: `implementation` → `Implementation`,
  * `respond-to-pr-comment` → `Respond to PR comment`. Reuses the same
  * separator-split + title-case idiom as `run-status-badge.tsx`'s `prettify`,
