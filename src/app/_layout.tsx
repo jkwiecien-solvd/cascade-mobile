@@ -29,6 +29,7 @@ import { ActivityIndicator, StyleSheet, useColorScheme, View } from 'react-nativ
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { AuthProvider, useAuth, type AuthStatus } from '@/lib/auth';
+import { NotificationsProvider } from '@/lib/notifications';
 import { OrgProvider } from '@/lib/org-context';
 import { queryClient } from '@/lib/query-client';
 
@@ -89,10 +90,12 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <OrgProvider>
-          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-            <AnimatedSplashOverlay />
-            <RootNavigator />
-          </ThemeProvider>
+          <NotificationsProvider>
+            <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+              <AnimatedSplashOverlay />
+              <RootNavigator />
+            </ThemeProvider>
+          </NotificationsProvider>
         </OrgProvider>
       </AuthProvider>
     </QueryClientProvider>

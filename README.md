@@ -34,6 +34,7 @@ The full agent catalogue and concepts live in the [backend README](../cascade/RE
 | Backend contract | imports `AppRouter` from `../cascade/src/api/router.ts` |
 | Secure storage | **expo-secure-store** (session/credentials) |
 | Cookies | **@react-native-cookies/cookies** (session-cookie persistence — see below) |
+| Push notifications | **expo-notifications** (remote push token + foreground handling) |
 
 Path alias: `@/*` → `./src/*` (and `@/assets/*` → `./assets/*`).
 
@@ -53,6 +54,19 @@ The app talks **only** to the Cascade **Dashboard API** (Hono + tRPC v11), which
 React Native's `fetch` does **not** persist cookies across requests like a browser does. Because the backend reads the session **only** from the `cascade_session` cookie, the app must persist and re-send it manually via **@react-native-cookies/cookies** (already installed). Plan the auth layer around this from the start.
 
 > In non-production the cookie is named `cascade_session_<NODE_ENV>` (e.g. `cascade_session_development`) — don't hard-code the name; let the cookie jar carry whatever the server set.
+
+### Push notifications
+
+Push notifications are opt-in (Settings → Notifications toggle) and require:
+
+1. **EAS dev/prod build** — remote push does **not** work in Expo Go or simulators. Build with `eas build --profile development` (or `preview`/`production`).
+2. **EAS `projectId`** — `app.json` → `extra.eas.projectId` must be set (produced by `eas init`). Without it, `getExpoPushTokenAsync` fails gracefully and the toggle stays inert.
+3. **APNs key (iOS) / FCM config (Android)** — configured through EAS credentials; not stored in this repo.
+4. **Backend endpoint (Phase B)** — the client registers/unregisters tokens via `POST /api/notifications/register-token` and `/unregister-token`, currently **fail-soft** (logs + swallows 404s until the endpoint exists in `../cascade`). See [`docs/push-notifications-backend-proposal.md`](./docs/push-notifications-backend-proposal.md).
+
+Notification taps deep-link to the run detail screen (`/runs/[runId]`). Foreground arrivals show a banner and invalidate the Runs feed so the list reflects the new outcome.
+
+The notification-preference layer lives in `src/lib/notifications/` — storage, service, provider, and a barrel mirror the existing `auth/` module pattern.
 
 ---
 
@@ -118,6 +132,13 @@ src/
       auth-service.ts   # login/logout (fetch) + AuthUser / AuthError
       auth-provider.tsx # <AuthProvider> + useAuth() state machine
       index.ts          # public barrel
+    notifications/  # push notification service, provider, storage, barrel
+      notification-storage.ts   # preference persistence (expo-secure-store; .web.ts → localStorage)
+      notifications.ts          # permission, token, channel, foreground handler (.web.ts → no-op)
+      register-token.ts         # fail-soft backend token registration client
+      notifications-provider.tsx # <NotificationsProvider> + useNotifications()
+      notification-deep-link.ts  # pure runId extraction helper
+      index.ts                   # public barrel
 ai/
   RULES.md        # System prompt / working rules for AI agents on this repo
 ```
