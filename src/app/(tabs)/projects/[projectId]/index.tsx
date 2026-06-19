@@ -1,15 +1,12 @@
 /**
- * Project detail — the project's **sections list**. Replaces the old runs-list
- * detail screen: it renders the project sections (Work, Stats) as pressable
- * rows that push the generic `[section]` placeholder.
+ * Project detail — the project's **sections list**. Renders the project
+ * sections (Work, Stats) as pressable rows. The "Work" row pushes the
+ * dedicated `work.tsx` static route (project-scoped runs feed); other rows
+ * push the generic `[section]` placeholder.
  *
  * The project name arrives via the route param set by the list screen and is
  * used as the stack title (falling back to a generic title when absent), and is
  * threaded through to the section screen so it can show a contextual header.
- *
- * Scope (this card): IA only. Each section's real content is a follow-up; the
- * retained `use-project-runs.ts` + `run-status-badge.tsx` will back the "Work"
- * section / cross-project runs feed later.
  */
 import { router, useLocalSearchParams } from 'expo-router';
 import { Stack } from 'expo-router/stack';
@@ -45,10 +42,15 @@ export default function ProjectDetailScreen() {
             key={item.section}
             accessibilityRole="button"
             onPress={() =>
-              router.push({
-                pathname: '/projects/[projectId]/[section]',
-                params: { projectId, section: item.section, label: item.label },
-              })
+              item.section === 'work'
+                ? router.push({
+                    pathname: '/projects/[projectId]/work',
+                    params: { projectId, label: item.label },
+                  })
+                : router.push({
+                    pathname: '/projects/[projectId]/[section]',
+                    params: { projectId, section: item.section, label: item.label },
+                  })
             }
             style={({ pressed }) => pressed && styles.pressed}>
             <ThemedView type="backgroundElement" style={styles.row}>
