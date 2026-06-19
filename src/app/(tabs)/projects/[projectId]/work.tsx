@@ -39,6 +39,17 @@ export default function ProjectWorkScreen() {
   const items = useMemo(() => (data?.items ?? []) as WorkItem[], [data]);
   const projectAvgDurationMs = data?.projectAvgDurationMs ?? null;
 
+  /**
+   * Whether an item has an in-app drill-down target. A `work-item`-type item
+   * without a `workItemId` (and no `prNumber`) has nowhere to navigate, so its
+   * card shouldn't get a (dead) `onPress`.
+   */
+  const canDrillIn = useCallback(
+    (item: WorkItem) =>
+      (item.type === 'work-item' && !!item.workItemId) || item.prNumber != null,
+    [],
+  );
+
   /** Navigate to the in-app drill-down for a work item or PR. */
   const handleItemPress = useCallback(
     (item: WorkItem) => {
@@ -115,7 +126,7 @@ export default function ProjectWorkScreen() {
             <WorkItemCard
               item={item}
               projectAvgDurationMs={projectAvgDurationMs}
-              onPress={() => handleItemPress(item)}
+              onPress={canDrillIn(item) ? () => handleItemPress(item) : undefined}
             />
           )}
         />

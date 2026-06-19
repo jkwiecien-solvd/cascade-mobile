@@ -7,12 +7,14 @@
  * item), a per-agent duration bar, and a run-count · cost meta line.
  *
  * ## Navigation
- * The card body is wrapped in a `Pressable` that drills into an in-app runs
- * screen for the work item / PR (when an `onPress` callback is provided).
- * External links to GitHub / the PM tool remain as separate `ExternalLink`
- * affordances — tapping the `#number`/title link opens the external URL,
- * tapping elsewhere on the card opens the drill-down. This keeps both
- * interactions reachable.
+ * When an `onPress` callback is provided, the card's duration-bar + meta body is
+ * wrapped in a `Pressable` that drills into an in-app runs screen for the work
+ * item / PR. The title block (which carries the GitHub / PM-tool `ExternalLink`
+ * affordances) is rendered **outside** that `Pressable` — the same deliberate
+ * arrangement `RunCard` uses for its PR link — so tapping a `#number`/title link
+ * unambiguously opens the external URL, while tapping the body opens the
+ * drill-down. Keeping the links out of the navigation responder avoids relying
+ * on nested-pressable responder priority.
  *
  * ## Type note
  * Fields are read through {@link WorkItem} — a narrow local view of
@@ -116,14 +118,19 @@ export function WorkItemCard({
 }) {
   const cost = formatCost(item.totalCostUsd);
 
-  const content = (
-    <>
-      {/* Title block */}
-      <View style={styles.titleBlock}>
-        <PrimaryTitle item={item} />
-        <SecondaryTitle item={item} />
-      </View>
+  // Title block carries the ExternalLink affordances — kept outside the
+  // navigation Pressable below so link taps aren't captured by the drill-down.
+  const titleBlock = (
+    <View style={styles.titleBlock}>
+      <PrimaryTitle item={item} />
+      <SecondaryTitle item={item} />
+    </View>
+  );
 
+  // Body: the per-agent duration bar + the run-count · cost meta line. This is
+  // the drill-down tap target when `onPress` is provided.
+  const body = (
+    <>
       {/* Duration bar (by agent type) */}
       <WorkItemDurationBar runs={item.runs ?? []} projectAvgDurationMs={projectAvgDurationMs} />
 
@@ -149,11 +156,12 @@ export function WorkItemCard({
   if (onPress) {
     return (
       <ThemedView type="backgroundElement" style={styles.card}>
+        {titleBlock}
         <Pressable
           accessibilityRole="button"
           onPress={onPress}
-          style={({ pressed }) => pressed && styles.pressed}>
-          {content}
+          style={({ pressed }) => [styles.body, pressed && styles.pressed]}>
+          {body}
         </Pressable>
       </ThemedView>
     );
@@ -161,7 +169,8 @@ export function WorkItemCard({
 
   return (
     <ThemedView type="backgroundElement" style={styles.card}>
-      {content}
+      {titleBlock}
+      {body}
     </ThemedView>
   );
 }
@@ -171,6 +180,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.three,
     borderRadius: Spacing.three,
+    gap: Spacing.two,
+  },
+  body: {
     gap: Spacing.two,
   },
   pressed: {
