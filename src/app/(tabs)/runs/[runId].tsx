@@ -28,6 +28,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ExternalLink } from '@/components/external-link';
 import { EmptyState, ErrorState, Loading } from '@/components/query-states';
+import { RunDebugAnalysis, type RunDebugAnalysisData } from '@/components/run-debug-analysis';
 import { RunLlmCalls } from '@/components/run-llm-calls';
 import { RunLogs } from '@/components/run-logs';
 import { RunOverview, type RunOverviewData } from '@/components/run-overview';
@@ -45,13 +46,14 @@ import { formatAgentType } from '@/lib/relative-time';
  * fields (agent type, work item / PR links) so the full run object flows to
  * both the header card and the `RunOverview` section without a second cast.
  */
-type RunDetail = RunOverviewData & {
-  agentType?: string;
-  workItemTitle?: string;
-  workItemUrl?: string;
-  prNumber?: number;
-  prUrl?: string;
-};
+type RunDetail = RunOverviewData &
+  RunDebugAnalysisData & {
+    agentType?: string;
+    workItemTitle?: string;
+    workItemUrl?: string;
+    prNumber?: number;
+    prUrl?: string;
+  };
 
 export default function RunDetailScreen() {
   const insets = useSafeAreaInsets();
@@ -129,6 +131,8 @@ export default function RunDetailScreen() {
                     style={[styles.sectionContent, { paddingBottom: insets.bottom + Spacing.three }]}>
                     {section === 'overview' ? (
                       <RunOverview run={run} />
+                    ) : section === 'debug' ? (
+                      <RunDebugAnalysis run={run} />
                     ) : (
                       <EmptyState message={activeSection.emptyMessage} />
                     )}
