@@ -89,33 +89,33 @@ export function ProjectStats({ projectId }: { projectId: string }) {
   }
 
   const stats = data as ProjectStatsData | undefined;
-
-  if (!stats || stats.totalRuns === 0) {
-    return <EmptyState message="No activity yet." />;
-  }
-
-  const successRatio = deriveSuccessRate(stats);
+  const successRatio = stats ? deriveSuccessRate(stats) : null;
 
   // Build KPI entries — omit any whose source field is entirely absent.
   const kpis: { label: string; value: string | null }[] = [];
 
-  if (stats.totalRuns != null) {
+  if (stats?.totalRuns != null) {
     kpis.push({ label: 'Total runs', value: String(stats.totalRuns) });
   }
   if (successRatio != null) {
     kpis.push({ label: 'Success rate', value: formatPercentage(successRatio) });
   }
-  if (stats.totalCostUsd != null) {
+  if (stats?.totalCostUsd != null) {
     kpis.push({ label: 'Total cost', value: formatCost(stats.totalCostUsd) });
   }
-  if (stats.avgDurationMs != null) {
+  if (stats?.avgDurationMs != null) {
     kpis.push({ label: 'Avg duration', value: formatDuration(stats.avgDurationMs) });
   }
-  if (stats.runningRuns != null) {
+  if (stats?.runningRuns != null) {
     kpis.push({ label: 'Active runs', value: String(stats.runningRuns) });
   }
 
-  if (kpis.length === 0) {
+  // Empty state is content-driven: it fires whenever there is nothing to
+  // render (no data, or every contract field absent/renamed) — it does NOT
+  // hinge on `totalRuns` alone, the field most likely to be misnamed. The
+  // explicit `totalRuns === 0` case keeps the friendly copy for a genuinely
+  // brand-new project that reports zero runs.
+  if (kpis.length === 0 || stats?.totalRuns === 0) {
     return <EmptyState message="No activity yet." />;
   }
 
