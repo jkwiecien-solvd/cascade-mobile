@@ -3,19 +3,22 @@
  *
  * Owns the {@link useProjectStats} hook (parallels `RunLlmCalls` owning
  * `useRunLlmCalls`) and renders a 2-column grid of {@link StatCard}s for the
- * key KPIs: total runs, success rate, total cost, average duration, and active
- * runs. Pull-to-refresh is wired via `RefreshControl`.
+ * key KPIs: total runs, success rate, total cost, and average duration. Mirrors
+ * the web Stats page's `StatsSummary`. Pull-to-refresh is wired via
+ * `RefreshControl`.
  *
  * ## Type note
- * {@link ProjectStatsData} is a narrow local view (same cross-repo narrowing
- * idiom as `RunListItem` / `RunOverviewData`); every field but `projectId` is
- * optional so missing/renamed contract fields render blank, never crash.
+ * The `prs.workStatsAggregated` procedure returns `{ summary, byAgentType }`;
+ * this screen reads the `summary` block. {@link StatsSummary} is a narrow local
+ * view of that block (same cross-repo narrowing idiom as `RunListItem` /
+ * `RunOverviewData`); every field is optional so a missing/renamed contract
+ * field renders blank, never crashes.
  *
  * Caveat (same as `run-overview.tsx`): because the consumer casts and every
  * field is optional, a *misnamed* field is NOT a compile error — it simply
- * renders blank. These names must be confirmed against
- * `../cascade/src/api/routers/projects.ts` in a checkout where `AppRouter`
- * resolves.
+ * renders blank. These names are verified against
+ * `../cascade/src/db/repositories/runStatsRepository.ts`
+ * (`getProjectWorkStatsAggregated`).
  */
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
@@ -29,44 +32,50 @@ import { formatCost, formatDuration, formatPercentage } from '@/lib/relative-tim
 // ─── Narrow local type ──────────────────────────────────────────────────────
 
 /**
- * Narrow view of the fields this component renders.
- * Every field but `projectId` is optional so missing/renamed contract fields
- * render blank, never crash (same idiom as `RunOverviewData`).
+ * Narrow view of the `summary` block returned by `prs.workStatsAggregated`.
+ * Every field is optional so a missing/renamed contract field renders blank,
+ * never crashes (same idiom as `RunOverviewData`).
  *
- * Field names are unverified — confirm against
- * `../cascade/src/api/routers/projects.ts` when the sibling repo is present.
+ * Field names verified against `getProjectWorkStatsAggregated` in
+ * `../cascade/src/db/repositories/runStatsRepository.ts`. Note `successRate` is
+ * a 0–100 percentage and `totalCostUsd` / `avgDurationMs` may be a string /
+ * `null` respectively.
  */
-type ProjectStatsData = {
-  projectId: string;
+type StatsSummary = {
   totalRuns?: number;
-  succeededRuns?: number;
+  completedRuns?: number;
   failedRuns?: number;
+  timedOutRuns?: number;
   successRate?: number;
   totalCostUsd?: number | string;
-  avgDurationMs?: number;
-  runningRuns?: number;
+  avgDurationMs?: number | null;
+};
+
+/** Full procedure output; this screen renders the `summary` block. */
+type ProjectStatsData = {
+  summary?: StatsSummary;
 };
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 /**
  * Derive a success-rate ratio (0–1) tolerantly:
- * - Use `successRate` when present (normalize: if > 1, treat as percentage
- *   and divide by 100).
- * - Fall back to `succeededRuns / totalRuns` when both are present.
+ * - Use `successRate` when present (the backend sends a 0–100 percentage, so
+ *   values > 1 are divided by 100; values ≤ 1 are passed through defensively).
+ * - Fall back to `completedRuns / totalRuns` when both are present.
  * - Return `null` otherwise.
  */
-function deriveSuccessRate(stats: ProjectStatsData): number | null {
-  if (stats.successRate != null && Number.isFinite(stats.successRate)) {
-    // Normalize: if > 1, assume the backend sent a percentage (e.g. 95)
-    return stats.successRate > 1 ? stats.successRate / 100 : stats.successRate;
+function deriveSuccessRate(summary: StatsSummary): number | null {
+  if (summary.successRate != null && Number.isFinite(summary.successRate)) {
+    // Backend sends a percentage (e.g. 95); normalize to a 0–1 ratio.
+    return summary.successRate > 1 ? summary.successRate / 100 : summary.successRate;
   }
   if (
-    stats.succeededRuns != null &&
-    stats.totalRuns != null &&
-    stats.totalRuns > 0
+    summary.completedRuns != null &&
+    summary.totalRuns != null &&
+    summary.totalRuns > 0
   ) {
-    return stats.succeededRuns / stats.totalRuns;
+    return summary.completedRuns / summary.totalRuns;
   }
   return null;
 }
@@ -88,26 +97,23 @@ export function ProjectStats({ projectId }: { projectId: string }) {
     );
   }
 
-  const stats = data as ProjectStatsData | undefined;
-  const successRatio = stats ? deriveSuccessRate(stats) : null;
+  const summary = (data as ProjectStatsData | undefined)?.summary;
+  const successRatio = summary ? deriveSuccessRate(summary) : null;
 
   // Build KPI entries — omit any whose source field is entirely absent.
   const kpis: { label: string; value: string | null }[] = [];
 
-  if (stats?.totalRuns != null) {
-    kpis.push({ label: 'Total runs', value: String(stats.totalRuns) });
+  if (summary?.totalRuns != null) {
+    kpis.push({ label: 'Total runs', value: String(summary.totalRuns) });
   }
   if (successRatio != null) {
     kpis.push({ label: 'Success rate', value: formatPercentage(successRatio) });
   }
-  if (stats?.totalCostUsd != null) {
-    kpis.push({ label: 'Total cost', value: formatCost(stats.totalCostUsd) });
+  if (summary?.totalCostUsd != null) {
+    kpis.push({ label: 'Total cost', value: formatCost(summary.totalCostUsd) });
   }
-  if (stats?.avgDurationMs != null) {
-    kpis.push({ label: 'Avg duration', value: formatDuration(stats.avgDurationMs) });
-  }
-  if (stats?.runningRuns != null) {
-    kpis.push({ label: 'Active runs', value: String(stats.runningRuns) });
+  if (summary?.avgDurationMs != null) {
+    kpis.push({ label: 'Avg duration', value: formatDuration(summary.avgDurationMs) });
   }
 
   // Empty state is content-driven: it fires whenever there is nothing to
@@ -115,7 +121,7 @@ export function ProjectStats({ projectId }: { projectId: string }) {
   // hinge on `totalRuns` alone, the field most likely to be misnamed. The
   // explicit `totalRuns === 0` case keeps the friendly copy for a genuinely
   // brand-new project that reports zero runs.
-  if (kpis.length === 0 || stats?.totalRuns === 0) {
+  if (kpis.length === 0 || summary?.totalRuns === 0) {
     return <EmptyState message="No activity yet." />;
   }
 

@@ -1,29 +1,19 @@
 /**
  * useProjectStats — typed query hook for a project's summary statistics.
  *
- * A thin wrapper over the `projects` router; mirrors {@link useProjectRuns}
- * verbatim: `useQuery({ ...trpc.projects.getStats.queryOptions(...) })`.
+ * Wraps the `prs.workStatsAggregated` procedure (verified against
+ * `../cascade/src/api/routers/prs.ts`), which the reference web client uses on
+ * its project Stats page (`web/src/routes/projects/$projectId.stats.tsx`).
+ * It returns `{ summary, byAgentType }`; this app renders the `summary` KPIs.
  * Org-scoping is automatic via the `x-org-context` header (see `trpc.ts`).
  *
  * The query is gated on `useOrg().isReady` (org hydration + `auth.me` settled,
  * see `org-context.tsx`) **and** on a truthy `projectId`, so it never fires
  * with an empty id while the route param is still resolving.
  *
- * NOTE — UNVERIFIED PROCEDURE NAME. The exact procedure name
- * (`projects.getStats`) and its `{ projectId }` input could NOT be verified in
- * this checkout because the sibling `../cascade` repo is absent (so `AppRouter`
- * does not resolve here). The narrow-local-type "renders blank, never crash"
- * idiom in `project-stats.tsx` only protects *output field names* — it does
- * **not** cover this procedure name. Confirm against
- * `../cascade/src/api/routers/projects.ts` in a full checkout before merge
- * (RULES.md §5: do not guess procedure names). Plausible alternatives if the
- * name is wrong: `projects.stats`, `runs.stats`, `stats.forProject`.
- *
- * Failure modes if the name/input is wrong:
- * - Compile time (once `AppRouter` resolves): a hard TS error on
- *   `trpc.projects.getStats` — this is the intended loud verification gate.
- * - Runtime: tRPC throws, which surfaces through the hook's `isError` branch as
- *   `ProjectStats`'s `ErrorState` (not a crash, but not a graceful blank).
+ * The optional `dateFrom` / `agentType` / `status` inputs are omitted here, so
+ * the backend aggregates over the 500 most recent completed/failed/timed-out
+ * runs for the project (no client-side time-range or filter controls yet).
  */
 import { useQuery } from '@tanstack/react-query';
 
@@ -34,7 +24,7 @@ export function useProjectStats(projectId: string | undefined) {
   const { isReady } = useOrg();
 
   return useQuery({
-    ...trpc.projects.getStats.queryOptions({ projectId: projectId ?? '' }),
+    ...trpc.prs.workStatsAggregated.queryOptions({ projectId: projectId ?? '' }),
     enabled: isReady && !!projectId,
   });
 }
