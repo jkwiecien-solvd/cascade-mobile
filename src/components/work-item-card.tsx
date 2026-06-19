@@ -41,12 +41,6 @@ export type WorkItem = {
   runs?: RunSegmentInput[];
 };
 
-const TYPE_LABEL: Record<WorkItem['type'], string> = {
-  pr: 'PR',
-  linked: 'Linked',
-  'work-item': 'Work Item',
-};
-
 /** PR "#123 · title" or the work-item title, linked to its URL when present. */
 function PrimaryTitle({ item }: { item: WorkItem }) {
   if (item.type === 'work-item') {
@@ -119,17 +113,10 @@ export function WorkItemCard({
 
   return (
     <ThemedView type="backgroundElement" style={styles.card}>
-      {/* Type chip + title block */}
-      <View style={styles.header}>
-        <ThemedView type="backgroundSelected" style={styles.typeChip}>
-          <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-            {TYPE_LABEL[item.type]}
-          </ThemedText>
-        </ThemedView>
-        <View style={styles.titleBlock}>
-          <PrimaryTitle item={item} />
-          <SecondaryTitle item={item} />
-        </View>
+      {/* Title block */}
+      <View style={styles.titleBlock}>
+        <PrimaryTitle item={item} />
+        <SecondaryTitle item={item} />
       </View>
 
       {/* Duration bar (by agent type) */}
@@ -162,18 +149,7 @@ const styles = StyleSheet.create({
     borderRadius: Spacing.three,
     gap: Spacing.two,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: Spacing.two,
-  },
-  typeChip: {
-    paddingHorizontal: Spacing.two,
-    paddingVertical: Spacing.half,
-    borderRadius: Spacing.five,
-  },
   titleBlock: {
-    flex: 1,
     gap: Spacing.half,
   },
   metaRow: {

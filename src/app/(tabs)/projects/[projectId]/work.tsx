@@ -24,12 +24,14 @@ import { EmptyState, ErrorState, Loading } from '@/components/query-states';
 import { ThemedText } from '@/components/themed-text';
 import { WorkItemCard, type WorkItem } from '@/components/work-item-card';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import { useAgentColor } from '@/lib/agent-colors';
 import { formatAgentType } from '@/lib/relative-time';
 import { useProjectWork } from '@/hooks/use-project-work';
 
 export default function ProjectWorkScreen() {
   const insets = useSafeAreaInsets();
+  const theme = useTheme();
   const agentColor = useAgentColor();
   const { projectId, label } = useLocalSearchParams<{ projectId: string; label?: string }>();
 
@@ -85,6 +87,9 @@ export default function ProjectWorkScreen() {
             </View>
           }
           ListEmptyComponent={<EmptyState message="No work found for this project." />}
+          ItemSeparatorComponent={() => (
+            <View style={[styles.separator, { backgroundColor: theme.textSecondary }]} />
+          )}
           renderItem={({ item }) => (
             <WorkItemCard item={item} projectAvgDurationMs={projectAvgDurationMs} />
           )}
@@ -106,12 +111,17 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: Spacing.three,
-    gap: Spacing.two,
     flexGrow: 1,
   },
   headerRow: {
     gap: Spacing.two,
-    paddingBottom: Spacing.one,
+    paddingBottom: Spacing.three,
+  },
+  separator: {
+    height: StyleSheet.hairlineWidth,
+    marginVertical: Spacing.two,
+    marginHorizontal: Spacing.two,
+    opacity: 0.25,
   },
   legend: {
     flexDirection: 'row',
