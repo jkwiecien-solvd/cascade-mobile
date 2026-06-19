@@ -1,5 +1,5 @@
 /**
- * ProjectStats — summary metric grid + per-agent-type breakdown for a project's
+ * ProjectStats — summary metric grid + per-agent-type charts for a project's
  * Stats section.
  *
  * Owns the {@link useProjectStats} hook (parallels `RunLlmCalls` owning
@@ -7,9 +7,9 @@
  * 1. A 2-column grid of {@link StatCard}s for the key KPIs: total runs, success
  *    rate, total cost, and average duration (mirrors the web Stats page's
  *    `StatsSummary`).
- * 2. A "By agent type" breakdown section below the grid, rendering one
- *    {@link AgentStatsRow} per agent type with run count, success rate, and
- *    average cost — sorted by run count descending, zero-run agents omitted.
+ * 2. A "By agent type" section with two charts, ported from the web client:
+ *    a {@link CostPieChart} (cost share by agent type) and a
+ *    {@link DurationBarChart} (total duration by agent type).
  *
  * Pull-to-refresh via `RefreshControl` covers both sections.
  *
@@ -20,24 +20,28 @@
  * `RunOverviewData`); every field is optional so a missing/renamed contract
  * field renders blank, never crashes.
  *
- * Caveat (same as `run-overview.tsx`): because the consumer casts and every
- * field is optional, a *misnamed* field is NOT a compile error — it simply
- * renders blank. These names are verified against
+ * Field names are verified against the `AgentTypeBreakdown` / summary shapes in
  * `../cascade/src/db/repositories/runStatsRepository.ts`
- * (`getProjectWorkStatsAggregated`).
+ * (`getProjectWorkStatsAggregated`). NOTE: each `byAgentType` entry exposes
+ * `runCount` / `totalCostUsd` / `totalDurationMs` / `avgDurationMs` — it does
+ * **not** carry per-agent `completedRuns`/`successRate` (those exist only on
+ * `summary`), so there is no per-agent success-rate breakdown. The web client
+ * likewise charts only cost and duration by agent type.
  */
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
-import { AgentStatsRow } from '@/components/agent-stats-row';
+import { CostPieChart, type CostSlice } from '@/components/charts/cost-pie-chart';
+import { DurationBarChart, type DurationBar } from '@/components/charts/duration-bar-chart';
 import { EmptyState, ErrorState, Loading } from '@/components/query-states';
 import { StatCard } from '@/components/stat-card';
 import { ThemedText } from '@/components/themed-text';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { useAgentColor } from '@/lib/chart-colors';
 import { useProjectStats } from '@/hooks/use-project-stats';
 import { useTheme } from '@/hooks/use-theme';
 import { formatAgentType, formatCost, formatDuration, formatPercentage } from '@/lib/relative-time';
 
-// ─── Narrow local type ──────────────────────────────────────────────────────
+// ─── Narrow local types ───────────────────────────────────────────────────────
 
 /**
  * Narrow view of the `summary` block returned by `prs.workStatsAggregated`.
@@ -60,17 +64,18 @@ type StatsSummary = {
 };
 
 /**
- * Narrow view of one element in the `byAgentType` array returned by
- * `prs.workStatsAggregated`. Field names mirror the `StatsSummary` block above
- * (both are produced by `getProjectWorkStatsAggregated`). Every field is
- * optional — the established "missing field → blank, never crash" idiom.
+ * Narrow view of one element in the `byAgentType` array (the backend's
+ * `AgentTypeBreakdown`). Field names verified against `runStatsRepository.ts`:
+ * the per-agent entry carries `runCount` (NOT `totalRuns`), `totalCostUsd`
+ * (string), and `totalDurationMs`; it has no per-agent success data. Every
+ * field is optional — the established "missing field → blank, never crash"
+ * idiom.
  */
 type AgentTypeStat = {
   agentType?: string;
-  totalRuns?: number;
-  completedRuns?: number;
-  successRate?: number;
+  runCount?: number;
   totalCostUsd?: number | string;
+  totalDurationMs?: number;
   avgDurationMs?: number | null;
 };
 
@@ -104,52 +109,42 @@ function deriveSuccessRate(summary: StatsSummary): number | null {
   return null;
 }
 
-/**
- * Derive an average cost per run: `totalCostUsd / totalRuns`, guarding
- * divide-by-zero and tolerating a string cost (same `parseFloat` tolerance as
- * `formatCost`). Returns `null` when the inputs are absent or the division is
- * undefined.
- */
-export function deriveAvgCost(entry: AgentTypeStat): number | null {
-  if (entry.totalCostUsd == null || entry.totalRuns == null || entry.totalRuns === 0) {
-    return null;
-  }
-  const cost =
-    typeof entry.totalCostUsd === 'string'
-      ? parseFloat(entry.totalCostUsd)
-      : entry.totalCostUsd;
-  if (!Number.isFinite(cost)) return null;
-  return cost / entry.totalRuns;
+/** Parse a numeric or string cost into a finite number, or `null`. */
+function parseCost(value: number | string | null | undefined): number | null {
+  if (value == null) return null;
+  const num = typeof value === 'string' ? parseFloat(value) : value;
+  return Number.isFinite(num) ? num : null;
 }
 
-/** Lightweight view-model consumed by `AgentStatsRow`. */
-export type AgentRowViewModel = {
+/** Normalized per-agent row used to build both charts. */
+export type AgentBreakdownRow = {
   agentType: string;
   label: string;
   runCount: number;
-  successRatio: number | null;
-  avgCost: number | null;
+  totalCostUsd: number;
+  totalDurationMs: number;
 };
 
 /**
- * Filter zero-run agents, derive per-row metrics, sort by run count descending.
+ * Normalize the `byAgentType` block into chart-ready rows, tolerating absent /
+ * string-typed fields. Cost defaults to 0 (not null) so it can be summed and
+ * filtered uniformly; per-chart filtering of zero values happens at render.
  * Exported so it is unit-testable when a test runner is added.
  */
-export function deriveAgentRows(
+export function deriveAgentBreakdown(
   byAgentType: AgentTypeStat[] | undefined,
-): AgentRowViewModel[] {
+): AgentBreakdownRow[] {
   if (!byAgentType || byAgentType.length === 0) return [];
 
-  return byAgentType
-    .filter((a) => (a.totalRuns ?? 0) > 0)
-    .map((a) => ({
-      agentType: a.agentType ?? 'unknown',
-      label: formatAgentType(a.agentType),
-      runCount: a.totalRuns ?? 0,
-      successRatio: deriveSuccessRate(a),
-      avgCost: deriveAvgCost(a),
-    }))
-    .sort((a, b) => b.runCount - a.runCount);
+  return byAgentType.map((a) => ({
+    agentType: a.agentType ?? 'unknown',
+    label: formatAgentType(a.agentType),
+    runCount: a.runCount ?? 0,
+    totalCostUsd: parseCost(a.totalCostUsd) ?? 0,
+    totalDurationMs: typeof a.totalDurationMs === 'number' && a.totalDurationMs > 0
+      ? a.totalDurationMs
+      : 0,
+  }));
 }
 
 // ─── ProjectStats ───────────────────────────────────────────────────────────
@@ -158,6 +153,7 @@ export function ProjectStats({ projectId }: { projectId: string }) {
   const { data, isPending, isError, error, refetch, isRefetching } =
     useProjectStats(projectId);
   const theme = useTheme();
+  const agentColor = useAgentColor();
 
   if (isPending) return <Loading message="Loading stats…" />;
   if (isError) {
@@ -172,7 +168,34 @@ export function ProjectStats({ projectId }: { projectId: string }) {
   const statsData = data as ProjectStatsData | undefined;
   const summary = statsData?.summary;
   const successRatio = summary ? deriveSuccessRate(summary) : null;
-  const agentRows = deriveAgentRows(statsData?.byAgentType);
+  const breakdown = deriveAgentBreakdown(statsData?.byAgentType);
+
+  // Cost slices: positive cost only, largest share first.
+  const costSlices: CostSlice[] = breakdown
+    .filter((r) => r.totalCostUsd > 0)
+    .sort((a, b) => b.totalCostUsd - a.totalCostUsd)
+    .map((r) => ({
+      key: r.agentType,
+      label: r.label,
+      value: r.totalCostUsd,
+      color: agentColor(r.agentType),
+      display: formatCost(r.totalCostUsd) ?? '$0.00',
+    }));
+  const totalCost = costSlices.reduce((sum, s) => sum + s.value, 0);
+
+  // Duration bars: positive duration only, longest first (matches web).
+  const durationBars: DurationBar[] = breakdown
+    .filter((r) => r.totalDurationMs > 0)
+    .sort((a, b) => b.totalDurationMs - a.totalDurationMs)
+    .map((r) => ({
+      key: r.agentType,
+      label: r.label,
+      value: r.totalDurationMs,
+      color: agentColor(r.agentType),
+      display: formatDuration(r.totalDurationMs) ?? '',
+    }));
+
+  const hasCharts = costSlices.length > 0 || durationBars.length > 0;
 
   // Build KPI entries — omit any whose source field is entirely absent.
   const kpis: { label: string; value: string | null }[] = [];
@@ -218,22 +241,26 @@ export function ProjectStats({ projectId }: { projectId: string }) {
         ))}
       </View>
 
-      {/* Agent-type breakdown section. */}
+      {/* Agent-type charts. */}
       <View style={styles.agentSection}>
-        <ThemedText type="smallBold" style={styles.sectionHeading}>
-          By agent type
-        </ThemedText>
-        {agentRows.length > 0 ? (
-          <View style={styles.agentList}>
-            {agentRows.map((row) => (
-              <AgentStatsRow
-                key={row.agentType}
-                label={row.label}
-                runs={`${row.runCount} runs`}
-                successRate={formatPercentage(row.successRatio)}
-                avgCost={formatCost(row.avgCost)}
-              />
-            ))}
+        {hasCharts ? (
+          <View style={styles.charts}>
+            {costSlices.length > 0 ? (
+              <View style={styles.chartBlock}>
+                <ThemedText type="smallBold" style={styles.chartTitle}>
+                  Cost by agent type
+                </ThemedText>
+                <CostPieChart slices={costSlices} totalDisplay={formatCost(totalCost) ?? '$0.00'} />
+              </View>
+            ) : null}
+            {durationBars.length > 0 ? (
+              <View style={styles.chartBlock}>
+                <ThemedText type="smallBold" style={styles.chartTitle}>
+                  Duration by agent type
+                </ThemedText>
+                <DurationBarChart bars={durationBars} />
+              </View>
+            ) : null}
           </View>
         ) : (
           <ThemedText type="small" themeColor="textSecondary">
@@ -272,10 +299,14 @@ const styles = StyleSheet.create({
     marginTop: Spacing.four,
     gap: Spacing.two,
   },
-  sectionHeading: {
-    marginBottom: Spacing.half,
+  charts: {
+    gap: Spacing.four,
   },
-  agentList: {
+  chartBlock: {
     gap: Spacing.two,
+  },
+  chartTitle: {
+    fontSize: 18,
+    lineHeight: 24,
   },
 });
