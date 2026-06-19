@@ -23,12 +23,13 @@ import { useState } from 'react';
 
 import { useLocalSearchParams } from 'expo-router';
 import { Stack } from 'expo-router/stack';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ExternalLink } from '@/components/external-link';
 import { EmptyState, ErrorState, Loading } from '@/components/query-states';
 import { RunLlmCalls } from '@/components/run-llm-calls';
+import { RunLogs } from '@/components/run-logs';
 import { RunOverview, type RunOverviewData } from '@/components/run-overview';
 import { RunSectionTabs, RUN_SECTIONS, type RunSection } from '@/components/run-section-tabs';
 import { RunStatusBadge } from '@/components/run-status-badge';
@@ -75,58 +76,68 @@ export default function RunDetailScreen() {
       ) : !run ? (
         <EmptyState message="Run not found." />
       ) : (
-        <>
-          {/* Header card — status badge + links */}
-          <ScrollView
-            style={styles.scroll}
-            contentContainerStyle={[
-              styles.headerContent,
-              { paddingBottom: Spacing.two },
-            ]}>
-            {run.status || run.workItemUrl || run.prUrl ? (
-              <ThemedView type="backgroundElement" style={styles.card}>
-                {/* Status badge */}
-                {run.status ? (
-                  <View style={styles.row}>
-                    <RunStatusBadge status={run.status} />
+        (() => {
+          // Header card (status badge + links) and the section tabs are shared
+          // chrome. For the long lists (logs / LLM calls) they're handed in so
+          // the card scrolls away as the list header and the tabs stay sticky;
+          // for the static sections they render in normal flow above the body.
+          const headerCard =
+            run.status || run.workItemUrl || run.prUrl ? (
+              <View style={styles.headerCard}>
+                <ThemedView type="backgroundElement" style={styles.card}>
+                  {run.status ? (
+                    <View style={styles.row}>
+                      <RunStatusBadge status={run.status} />
+                    </View>
+                  ) : null}
+
+                  {run.workItemUrl ? (
+                    <ExternalLink href={run.workItemUrl}>
+                      <ThemedText type="linkPrimary">
+                        {run.workItemTitle ?? 'View work item'}
+                      </ThemedText>
+                    </ExternalLink>
+                  ) : null}
+
+                  {run.prUrl ? (
+                    <ExternalLink href={run.prUrl}>
+                      <ThemedText type="linkPrimary">
+                        {run.prNumber != null ? `PR #${run.prNumber}` : 'View PR'}
+                      </ThemedText>
+                    </ExternalLink>
+                  ) : null}
+                </ThemedView>
+              </View>
+            ) : null;
+
+          const tabs = <RunSectionTabs active={section} onChange={setSection} />;
+
+          return (
+            <>
+              {/* Persistent gap below the app bar — sticky tabs pin beneath it. */}
+              <View style={styles.topSpacer} />
+
+              {section === 'logs' ? (
+                <RunLogs runId={run.id} header={headerCard} tabs={tabs} />
+              ) : section === 'llm-calls' ? (
+                <RunLlmCalls runId={run.id} header={headerCard} tabs={tabs} />
+              ) : (
+                <>
+                  {headerCard}
+                  {tabs}
+                  <View
+                    style={[styles.sectionContent, { paddingBottom: insets.bottom + Spacing.three }]}>
+                    {section === 'overview' ? (
+                      <RunOverview run={run} />
+                    ) : (
+                      <EmptyState message={activeSection.emptyMessage} />
+                    )}
                   </View>
-                ) : null}
-
-                {/* Work Item link */}
-                {run.workItemUrl ? (
-                  <ExternalLink href={run.workItemUrl}>
-                    <ThemedText type="linkPrimary">
-                      {run.workItemTitle ?? 'View work item'}
-                    </ThemedText>
-                  </ExternalLink>
-                ) : null}
-
-                {/* PR link */}
-                {run.prUrl ? (
-                  <ExternalLink href={run.prUrl}>
-                    <ThemedText type="linkPrimary">
-                      {run.prNumber != null ? `PR #${run.prNumber}` : 'View PR'}
-                    </ThemedText>
-                  </ExternalLink>
-                ) : null}
-              </ThemedView>
-            ) : null}
-          </ScrollView>
-
-          {/* Section tab strip */}
-          <RunSectionTabs active={section} onChange={setSection} />
-
-          {/* Section content */}
-          <View style={[styles.sectionContent, { paddingBottom: insets.bottom + Spacing.three }]}>
-            {section === 'overview' ? (
-              <RunOverview run={run} />
-            ) : section === 'llm-calls' ? (
-              <RunLlmCalls runId={run.id} />
-            ) : (
-              <EmptyState message={activeSection.emptyMessage} />
-            )}
-          </View>
-        </>
+                </>
+              )}
+            </>
+          );
+        })()
       )}
     </ThemedView>
   );
@@ -136,17 +147,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  scroll: {
-    flexGrow: 0,
-    flexShrink: 1,
+  topSpacer: {
+    height: Spacing.three,
+  },
+  headerCard: {
     alignSelf: 'center',
     width: '100%',
     maxWidth: MaxContentWidth,
-  },
-  headerContent: {
-    padding: Spacing.three,
-    gap: Spacing.two,
-    flexGrow: 1,
+    paddingHorizontal: Spacing.three,
+    paddingBottom: Spacing.three,
   },
   card: {
     paddingHorizontal: Spacing.three,

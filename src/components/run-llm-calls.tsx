@@ -18,9 +18,10 @@
  * only re-renders that row (same per-item isolation rationale as `LiveDuration`;
  * React Compiler is on).
  */
-import { useState } from 'react';
-import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { type ReactElement, useState } from 'react';
+import { Pressable, SectionList, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EmptyState, ErrorState, Loading } from '@/components/query-states';
 import { ThemedText } from '@/components/themed-text';
@@ -178,32 +179,47 @@ function LlmCallRow({ item }: { item: LlmCallItem }) {
 
 // ─── RunLlmCalls ────────────────────────────────────────────────────────────
 
-export function RunLlmCalls({ runId }: { runId: string }) {
+export function RunLlmCalls({
+  runId,
+  header,
+  tabs,
+}: {
+  runId: string;
+  /** Run header card — scrolls away as the list's `ListHeaderComponent`. */
+  header?: ReactElement | null;
+  /** Section navigation tabs — pinned in the sticky section header. */
+  tabs?: ReactElement | null;
+}) {
   const { data, isPending, isError, error, refetch } = useRunLlmCalls(runId);
+  const insets = useSafeAreaInsets();
 
-  if (isPending) return <Loading message="Loading LLM calls…" />;
-  if (isError) {
-    return (
-      <ErrorState
-        message={error instanceof Error ? error.message : undefined}
-        onRetry={refetch}
-      />
-    );
-  }
+  const isReady = !isPending && !isError;
+  const items = isReady ? ((data?.calls ?? []) as LlmCallItem[]) : [];
 
-  const items = (data?.calls ?? []) as LlmCallItem[];
-
-  if (items.length === 0) {
-    return <EmptyState message="No LLM calls for this run." />;
-  }
+  const emptyComponent = isPending ? (
+    <Loading message="Loading LLM calls…" />
+  ) : isError ? (
+    <ErrorState message={error instanceof Error ? error.message : undefined} onRetry={refetch} />
+  ) : (
+    <EmptyState message="No LLM calls for this run." />
+  );
 
   return (
-    <FlatList
-      data={items}
+    <SectionList
+      sections={[{ data: items }]}
       keyExtractor={(item) => item.id}
       style={styles.list}
-      contentContainerStyle={styles.listContent}
+      contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + Spacing.three }]}
+      stickySectionHeadersEnabled
+      ListHeaderComponent={header ?? null}
+      renderSectionHeader={() => <ThemedView style={styles.stickyHeader}>{tabs}</ThemedView>}
       renderItem={({ item }) => <LlmCallRow item={item} />}
+      // SectionList always counts a header+footer per section, so itemCount is
+      // never 0 and ListEmptyComponent never fires — render the state in the
+      // (always-rendered) section footer instead.
+      renderSectionFooter={() =>
+        items.length === 0 ? <View style={styles.stateFooter}>{emptyComponent}</View> : null
+      }
     />
   );
 }
@@ -218,11 +234,17 @@ const styles = StyleSheet.create({
     maxWidth: MaxContentWidth,
   },
   listContent: {
-    padding: Spacing.three,
-    gap: Spacing.two,
     flexGrow: 1,
   },
+  stickyHeader: {
+    paddingBottom: Spacing.two,
+  },
+  stateFooter: {
+    minHeight: 240,
+  },
   card: {
+    marginHorizontal: Spacing.three,
+    marginBottom: Spacing.two,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.three,
     borderRadius: Spacing.three,
