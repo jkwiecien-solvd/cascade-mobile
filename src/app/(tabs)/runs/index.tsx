@@ -37,12 +37,10 @@ import {
   RunsFilterSheet,
 } from '@/components/runs-filter-sheet';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
 import { type RunFilters, useRuns } from '@/hooks/use-runs';
 
 export default function RunsScreen() {
   const insets = useSafeAreaInsets();
-  const theme = useTheme();
   const [filters, setFilters] = useState<RunFilters>({});
   const [filterOpen, setFilterOpen] = useState(false);
 
@@ -118,9 +116,6 @@ export default function RunsScreen() {
               </View>
             ) : null
           }
-          ItemSeparatorComponent={() => (
-            <View style={[styles.separator, { backgroundColor: theme.border }]} />
-          )}
           renderItem={({ item }) => (
             <RunCard
               run={item}
@@ -164,9 +159,5 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingVertical: Spacing.three,
-  },
-  separator: {
-    height: StyleSheet.hairlineWidth,
-    marginHorizontal: Spacing.two,
   },
 });
