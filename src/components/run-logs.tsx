@@ -1,28 +1,31 @@
 /**
  * RunLogs — Logs section of the run detail screen.
  *
- * Owns its own `runs.getLogs` query (keyed by `runId`) and renders a
- * two-segment sub-toggle (Cascade Log / Engine Log) above the active log. The
- * log is split into lines and each line is rendered as a separate `FlatList`
- * item, with a search field above that filters the lines (case-insensitive
- * substring match). Mirrors the web client's `log-viewer.tsx`, and the
- * self-fetching idiom of sibling section `RunLlmCalls` (each section component
- * owns its query by `runId`).
+ * Owns its own `runs.getLogs` query (keyed by `runId`) and renders a single
+ * `SectionList` so the run's header card (passed as {@link header}) scrolls
+ * away as real content while the navigation tabs (passed as {@link tabs}), the
+ * Cascade/Engine sub-toggle, and the filter field stay **sticky** at the top.
+ *
+ * The log is split into lines and each line is a separate list item, with the
+ * filter field running a case-insensitive substring match over them. Mirrors
+ * the web client's `log-viewer.tsx`.
+ *
+ * ## Why a single SectionList (not an animated collapsing header)
+ * An earlier version animated a separate header's height in response to
+ * `onScroll`. Because that header shared the vertical flex column with the
+ * list, collapsing it dragged the list up the screen at scroll speed —
+ * doubling apparent scroll velocity and oscillating around the fully-collapsed
+ * point ("shivers"). Making the card a real scroll item removes the feedback
+ * loop entirely: the scroll *is* the motion, so it can't fight itself.
  *
  * ## Design decisions
  * - **Self-fetching by `runId`** — the logs live on `runs.getLogs`, a separate
- *   procedure from `runs.getById`, so the screen can't hand them down. Same
- *   shape as `RunLlmCalls`/`useRunLlmCalls`.
- * - **Line-per-item list** — splitting on `\n` lets the search field filter
- *   individual lines while keeping the monospaced look. `FlatList`
- *   virtualizes, so large logs stay performant.
- * - **Sub-toggle** reuses the `Pressable` + `ThemedView` + `ThemedText` strip
- *   idiom from `RunSectionTabs` — no new shared abstraction; a future
- *   `SegmentedToggle` extraction may happen once a third consumer appears.
- * - **Word-wrap by default** — natural `Text` wrapping is the most readable
- *   on narrow screens and avoids nested-scroll gesture conflicts.
- * - **Loading / error / per-type empty state** via `query-states.tsx`.
- * - **`selectable`** on the log text so users can copy content.
+ *   procedure from `runs.getById`. Same shape as `RunLlmCalls`/`useRunLlmCalls`.
+ * - **Sticky chrome** (tabs + sub-toggle + filter) sits in `renderSectionHeader`
+ *   over an opaque `ThemedView` so scrolling lines don't bleed through.
+ * - **Loading / error / per-type empty state** route through
+ *   `ListEmptyComponent`, so the tabs stay visible (and switchable) regardless.
+ * - **`selectable`** on each line so users can copy content.
  *
  * ## Type note
  * `runs.getLogs`'s output (`{ cascadeLog, engineLog }`) is inferred from the
@@ -30,9 +33,10 @@
  * view so the component stays typed (no `any`). Confirmed against
  * `../cascade/src/api/routers/runs.ts` (`getLogs` → `getRunLogs`).
  */
-import { useMemo, useState } from 'react';
+import { type ReactElement, useMemo, useState } from 'react';
 
-import { FlatList, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, SectionList, StyleSheet, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EmptyState, ErrorState, Loading } from '@/components/query-states';
 import { ThemedText } from '@/components/themed-text';
@@ -65,9 +69,20 @@ type LogLine = { id: number; text: string };
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
-export function RunLogs({ runId }: { runId: string }) {
+export function RunLogs({
+  runId,
+  header,
+  tabs,
+}: {
+  runId: string;
+  /** Run header card — scrolls away as the list's `ListHeaderComponent`. */
+  header?: ReactElement | null;
+  /** Section navigation tabs — pinned in the sticky section header. */
+  tabs?: ReactElement | null;
+}) {
   const { data, isPending, isError, error, refetch } = useRunLogs(runId);
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<LogType>('cascade');
   const [query, setQuery] = useState('');
 
@@ -87,104 +102,120 @@ export function RunLogs({ runId }: { runId: string }) {
     return lines.filter((line) => line.text.toLowerCase().includes(trimmedQuery));
   }, [lines, trimmedQuery]);
 
-  if (isPending) return <Loading message="Loading logs…" />;
-  if (isError) {
-    return (
-      <ErrorState
-        message={error instanceof Error ? error.message : undefined}
-        onRetry={refetch}
-      />
-    );
-  }
-
+  const isReady = !isPending && !isError;
   const activeLogTab = LOG_TABS.find((t) => t.key === activeTab) ?? LOG_TABS[0];
-  const hasContent = lines.length > 0;
+
+  // Body items only once loaded; loading/error/empty go via ListEmptyComponent.
+  const sectionData: LogLine[] = isReady ? filteredLines : [];
+
+  const emptyComponent = isPending ? (
+    <Loading message="Loading logs…" />
+  ) : isError ? (
+    <ErrorState message={error instanceof Error ? error.message : undefined} onRetry={refetch} />
+  ) : lines.length === 0 ? (
+    <EmptyState message={activeLogTab.emptyMessage} />
+  ) : (
+    <EmptyState message={`No lines match “${query.trim()}”.`} />
+  );
 
   return (
-    <View style={styles.container}>
-      {/* Sub-toggle strip */}
-      <View style={styles.tray}>
-        <ThemedView type="backgroundElement" style={styles.strip}>
-          {LOG_TABS.map((tab) => {
-            const isActive = tab.key === activeTab;
-            return (
-              <Pressable
-                key={tab.key}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: isActive }}
-                accessibilityLabel={tab.label}
-                onPress={() => setActiveTab(tab.key)}
-                style={({ pressed }) => [styles.segment, pressed && styles.pressed]}>
-                <ThemedView
-                  type={isActive ? 'backgroundSelected' : 'backgroundElement'}
-                  style={styles.segmentInner}>
-                  <ThemedText
-                    type={isActive ? 'smallBold' : 'small'}
-                    themeColor={isActive ? 'text' : 'textSecondary'}
-                    numberOfLines={1}>
-                    {tab.label}
-                  </ThemedText>
+    <SectionList
+      sections={[{ data: sectionData }]}
+      keyExtractor={(item) => String(item.id)}
+      style={styles.list}
+      contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + Spacing.three }]}
+      keyboardShouldPersistTaps="handled"
+      stickySectionHeadersEnabled
+      ListHeaderComponent={header ?? null}
+      renderSectionHeader={() => (
+        <ThemedView style={styles.stickyHeader}>
+          {tabs}
+
+          {/* Cascade / Engine sub-toggle + filter — only once logs are loaded. */}
+          {isReady ? (
+            <View style={styles.controls}>
+              <View style={styles.subToggleTray}>
+                <ThemedView type="backgroundElement" style={styles.strip}>
+                  {LOG_TABS.map((tab) => {
+                    const isActive = tab.key === activeTab;
+                    return (
+                      <Pressable
+                        key={tab.key}
+                        accessibilityRole="tab"
+                        accessibilityState={{ selected: isActive }}
+                        accessibilityLabel={tab.label}
+                        onPress={() => setActiveTab(tab.key)}
+                        style={({ pressed }) => [styles.segment, pressed && styles.pressed]}>
+                        <ThemedView
+                          type={isActive ? 'backgroundSelected' : 'backgroundElement'}
+                          style={styles.segmentInner}>
+                          <ThemedText
+                            type={isActive ? 'smallBold' : 'small'}
+                            themeColor={isActive ? 'text' : 'textSecondary'}
+                            numberOfLines={1}>
+                            {tab.label}
+                          </ThemedText>
+                        </ThemedView>
+                      </Pressable>
+                    );
+                  })}
                 </ThemedView>
-              </Pressable>
-            );
-          })}
+              </View>
+
+              <TextInput
+                style={[
+                  styles.search,
+                  { color: theme.text, backgroundColor: theme.backgroundElement },
+                ]}
+                value={query}
+                onChangeText={setQuery}
+                placeholder="Filter log lines…"
+                placeholderTextColor={theme.textSecondary}
+                autoCapitalize="none"
+                autoCorrect={false}
+                clearButtonMode="while-editing"
+              />
+            </View>
+          ) : null}
         </ThemedView>
-      </View>
-
-      {/* Search field + line list, or per-type empty state */}
-      {hasContent ? (
-        <View style={styles.body}>
-          <View style={styles.searchTray}>
-            <TextInput
-              style={[
-                styles.search,
-                { color: theme.text, backgroundColor: theme.backgroundElement },
-              ]}
-              value={query}
-              onChangeText={setQuery}
-              placeholder="Filter log lines…"
-              placeholderTextColor={theme.textSecondary}
-              autoCapitalize="none"
-              autoCorrect={false}
-              clearButtonMode="while-editing"
-            />
-          </View>
-
-          <FlatList
-            data={filteredLines}
-            keyExtractor={(item) => String(item.id)}
-            style={styles.list}
-            contentContainerStyle={styles.listContent}
-            keyboardShouldPersistTaps="handled"
-            renderItem={({ item }) => (
-              <ThemedText type="code" selectable style={styles.logLine}>
-                {item.text === '' ? ' ' : item.text}
-              </ThemedText>
-            )}
-            ListEmptyComponent={
-              <EmptyState message={`No lines match “${query.trim()}”.`} />
-            }
-          />
-        </View>
-      ) : (
-        <EmptyState message={activeLogTab.emptyMessage} />
       )}
-    </View>
+      renderItem={({ item }) => (
+        <ThemedText type="code" selectable style={styles.logLine}>
+          {item.text === '' ? ' ' : item.text}
+        </ThemedText>
+      )}
+      // SectionList always counts a header+footer per section, so itemCount is
+      // never 0 and ListEmptyComponent never fires — render the state in the
+      // (always-rendered) section footer instead.
+      renderSectionFooter={() =>
+        sectionData.length === 0 ? <View style={styles.stateFooter}>{emptyComponent}</View> : null
+      }
+    />
   );
 }
 
 // ─── Styles ─────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  container: {
+  list: {
     flex: 1,
-  },
-  tray: {
     alignSelf: 'center',
     width: '100%',
     maxWidth: MaxContentWidth,
+  },
+  listContent: {
+    flexGrow: 1,
+  },
+  stickyHeader: {
+    paddingBottom: Spacing.two,
+  },
+  controls: {
     paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
+    paddingTop: Spacing.two,
+    gap: Spacing.two,
+  },
+  subToggleTray: {
+    width: '100%',
   },
   strip: {
     flexDirection: 'row',
@@ -203,34 +234,17 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.7,
   },
-  body: {
-    flex: 1,
-  },
-  searchTray: {
-    alignSelf: 'center',
-    width: '100%',
-    maxWidth: MaxContentWidth,
-    paddingHorizontal: Spacing.three,
-    paddingBottom: Spacing.two,
-  },
   search: {
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     borderRadius: Spacing.three,
     fontSize: 16,
   },
-  list: {
-    flex: 1,
-    alignSelf: 'center',
-    width: '100%',
-    maxWidth: MaxContentWidth,
-  },
-  listContent: {
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    flexGrow: 1,
-  },
   logLine: {
+    paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.half,
+  },
+  stateFooter: {
+    minHeight: 240,
   },
 });
