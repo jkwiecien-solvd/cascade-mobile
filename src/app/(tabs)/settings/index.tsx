@@ -1,6 +1,6 @@
 /**
- * Settings → General — account info, the active organization, a link to Users,
- * and the relocated sign-out control.
+ * Settings → General — account info, the active organization, the Cascade
+ * instance, and the relocated sign-out control.
  *
  * Account fields come from `useAuth().user` (name, email, role); the active org
  * name is resolved from `useOrg()` (`availableOrgs` matched against
@@ -67,18 +67,6 @@ export default function SettingsScreen() {
         <ThemedText type="small" themeColor="textSecondary">
           General
         </ThemedText>
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.push('/settings/users')}
-          style={({ pressed }) => pressed && styles.pressed}>
-          <ThemedView type="backgroundElement" style={styles.linkRow}>
-            <ThemedText type="smallBold">Users</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              Manage who has access
-            </ThemedText>
-          </ThemedView>
-        </Pressable>
-
         <Pressable
           accessibilityRole="button"
           onPress={async () => {
