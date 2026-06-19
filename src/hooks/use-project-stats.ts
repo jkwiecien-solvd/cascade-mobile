@@ -4,7 +4,9 @@
  * Wraps the `prs.workStatsAggregated` procedure (verified against
  * `../cascade/src/api/routers/prs.ts`), which the reference web client uses on
  * its project Stats page (`web/src/routes/projects/$projectId.stats.tsx`).
- * It returns `{ summary, byAgentType }`; this app renders the `summary` KPIs.
+ * It returns `{ summary, byAgentType }`; this app renders both blocks — the
+ * `summary` KPIs in a `StatCard` grid and the `byAgentType` entries as a cost
+ * pie chart and a duration bar chart (mirroring the web Stats charts).
  * Org-scoping is automatic via the `x-org-context` header (see `trpc.ts`).
  *
  * The query is gated on `useOrg().isReady` (org hydration + `auth.me` settled,
