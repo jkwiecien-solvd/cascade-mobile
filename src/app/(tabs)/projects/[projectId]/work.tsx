@@ -14,9 +14,9 @@
  * `headerRight` (the org switcher) is inherited from `ProjectsLayout`'s
  * `stackScreenOptions` — this screen doesn't override it.
  */
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Stack } from 'expo-router/stack';
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -38,6 +38,31 @@ export default function ProjectWorkScreen() {
 
   const items = useMemo(() => (data?.items ?? []) as WorkItem[], [data]);
   const projectAvgDurationMs = data?.projectAvgDurationMs ?? null;
+
+  /** Navigate to the in-app drill-down for a work item or PR. */
+  const handleItemPress = useCallback(
+    (item: WorkItem) => {
+      if (item.type === 'work-item' && item.workItemId) {
+        router.push({
+          pathname: '/projects/[projectId]/work-item/[workItemId]',
+          params: {
+            projectId: projectId ?? '',
+            workItemId: item.workItemId,
+            title: item.workItemTitle ?? 'Work Item Runs',
+          },
+        });
+      } else if (item.prNumber != null) {
+        router.push({
+          pathname: '/projects/[projectId]/pr/[prNumber]',
+          params: {
+            projectId: projectId ?? '',
+            prNumber: String(item.prNumber),
+          },
+        });
+      }
+    },
+    [projectId],
+  );
 
   // Unique agent types across all items, for the color legend (mirrors web).
   const agentTypes = useMemo(() => {
@@ -87,7 +112,11 @@ export default function ProjectWorkScreen() {
           }
           ListEmptyComponent={<EmptyState message="No work found for this project." />}
           renderItem={({ item }) => (
-            <WorkItemCard item={item} projectAvgDurationMs={projectAvgDurationMs} />
+            <WorkItemCard
+              item={item}
+              projectAvgDurationMs={projectAvgDurationMs}
+              onPress={() => handleItemPress(item)}
+            />
           )}
         />
       )}

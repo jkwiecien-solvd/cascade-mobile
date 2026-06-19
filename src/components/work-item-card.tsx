@@ -6,10 +6,13 @@
  * a card with a type chip, the PR / work-item title (stacked with its associated
  * item), a per-agent duration bar, and a run-count · cost meta line.
  *
- * The web row navigates to internal work-item / PR detail pages, which don't
- * exist on mobile yet — so here the PR and work-item titles are **external
- * links** (in-app browser) to their GitHub / PM-tool URLs. Internal detail
- * screens are out of scope (see ROADMAP).
+ * ## Navigation
+ * The card body is wrapped in a `Pressable` that drills into an in-app runs
+ * screen for the work item / PR (when an `onPress` callback is provided).
+ * External links to GitHub / the PM tool remain as separate `ExternalLink`
+ * affordances — tapping the `#number`/title link opens the external URL,
+ * tapping elsewhere on the card opens the drill-down. This keeps both
+ * interactions reachable.
  *
  * ## Type note
  * Fields are read through {@link WorkItem} — a narrow local view of
@@ -24,7 +27,7 @@ import { WorkItemDurationBar } from '@/components/work-item-duration-bar';
 import { Spacing } from '@/constants/theme';
 import type { RunSegmentInput } from '@/lib/agent-colors';
 import { formatCost } from '@/lib/relative-time';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 /** Narrow view of a `prs.listUnifiedWithDurations` item. */
 export type WorkItem = {
@@ -105,14 +108,16 @@ function SecondaryTitle({ item }: { item: WorkItem }) {
 export function WorkItemCard({
   item,
   projectAvgDurationMs,
+  onPress,
 }: {
   item: WorkItem;
   projectAvgDurationMs: number | null;
+  onPress?: () => void;
 }) {
   const cost = formatCost(item.totalCostUsd);
 
-  return (
-    <ThemedView type="backgroundElement" style={styles.card}>
+  const content = (
+    <>
       {/* Title block */}
       <View style={styles.titleBlock}>
         <PrimaryTitle item={item} />
@@ -138,6 +143,25 @@ export function WorkItemCard({
           </>
         ) : null}
       </View>
+    </>
+  );
+
+  if (onPress) {
+    return (
+      <ThemedView type="backgroundElement" style={styles.card}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={onPress}
+          style={({ pressed }) => pressed && styles.pressed}>
+          {content}
+        </Pressable>
+      </ThemedView>
+    );
+  }
+
+  return (
+    <ThemedView type="backgroundElement" style={styles.card}>
+      {content}
     </ThemedView>
   );
 }
@@ -148,6 +172,9 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     borderRadius: Spacing.three,
     gap: Spacing.two,
+  },
+  pressed: {
+    opacity: 0.7,
   },
   titleBlock: {
     gap: Spacing.half,
