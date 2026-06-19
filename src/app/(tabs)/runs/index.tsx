@@ -30,6 +30,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { OrgSwitcherHeader } from '@/components/org-switcher-header';
 import { EmptyState, ErrorState, Loading } from '@/components/query-states';
 import { RunCard, type RunListItem } from '@/components/run-card';
+import { ThemedView } from '@/components/themed-view';
 import {
   activeFilterCount,
   FilterTrigger,
@@ -74,7 +75,7 @@ export default function RunsScreen() {
   const hasActiveFilters = filterCount > 0;
 
   return (
-    <View style={styles.container}>
+    <ThemedView style={styles.container}>
       <Stack.Screen
         options={{
           title: 'Runs',
@@ -118,7 +119,7 @@ export default function RunsScreen() {
             ) : null
           }
           ItemSeparatorComponent={() => (
-            <View style={[styles.separator, { backgroundColor: theme.textSecondary }]} />
+            <View style={[styles.separator, { backgroundColor: theme.border }]} />
           )}
           renderItem={({ item }) => (
             <RunCard
@@ -137,7 +138,7 @@ export default function RunsScreen() {
         onChange={setFilters}
         onClose={() => setFilterOpen(false)}
       />
-    </View>
+    </ThemedView>
   );
 }
 
@@ -167,6 +168,5 @@ const styles = StyleSheet.create({
   separator: {
     height: StyleSheet.hairlineWidth,
     marginHorizontal: Spacing.two,
-    opacity: 0.25,
   },
 });

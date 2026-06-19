@@ -11,16 +11,28 @@ export const Colors = {
   light: {
     text: '#000000',
     background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
+    // Lightened from #F0F0F3 → #F7F8FA so translucent grey dividers drawn on
+    // top gain contrast against the card surface.
+    backgroundElement: '#F7F8FA',
+    // Adjusted from #E0E1E6 → #E9EBEF to maintain the visible active-state
+    // delta relative to the new lighter backgroundElement.
+    backgroundSelected: '#E9EBEF',
     textSecondary: '#60646C',
+    /** Dedicated border / divider color — decoupled from textSecondary so
+     *  divider prominence can be tuned independently. */
+    border: '#D7D9DE',
   },
   dark: {
     text: '#ffffff',
     background: '#000000',
+    // Dark mode: kept at #212225 (not lightened) — dark dividers are light lines
+    // on a dark surface, so lightening the card would *reduce* divider contrast.
     backgroundElement: '#212225',
     backgroundSelected: '#2E3135',
     textSecondary: '#B0B4BA',
+    /** Dark-mode border — slightly lighter than backgroundSelected for
+     *  visibility against the dark card surface. */
+    border: '#3A3D42',
   },
 } as const;
 

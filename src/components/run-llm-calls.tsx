@@ -27,6 +27,7 @@ import { EmptyState, ErrorState, Loading } from '@/components/query-states';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import { useRunLlmCalls } from '@/hooks/use-run-llm-calls';
 import { formatDuration, formatLlmCost, formatTokens } from '@/lib/relative-time';
 
@@ -71,6 +72,7 @@ function DetailRow({ label, value }: { label: string; value: string | null | und
 
 function LlmCallRow({ item }: { item: LlmCallItem }) {
   const [open, setOpen] = useState(false);
+  const theme = useTheme();
 
   const inputStr = formatTokens(item.inputTokens);
   const outputStr = formatTokens(item.outputTokens);
@@ -127,7 +129,7 @@ function LlmCallRow({ item }: { item: LlmCallItem }) {
       {/* Expanded detail */}
       {open ? (
         <Animated.View entering={FadeIn.duration(200)}>
-          <View style={styles.expandedContent}>
+          <View style={[styles.expandedContent, { borderTopColor: theme.border }]}>
             <DetailRow label="Model" value={item.model} />
             <DetailRow label="Input tokens" value={inputStr} />
             <DetailRow label="Output tokens" value={outputStr} />
@@ -277,7 +279,7 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.two,
     gap: Spacing.one,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(128, 128, 128, 0.2)',
+    // borderTopColor applied dynamically via theme.border
   },
   detailRow: {
     flexDirection: 'row',
